@@ -1,0 +1,1881 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>방과후·특강 운영계획서 / 지도안 / 출석부 자동 생성기</title>
+  <style>
+    :root {
+      --primary: #1a73e8;
+      --primary-hover: #1557b0;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #dadce0;
+      --text: #202124;
+      --subtext: #5f6368;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: 'Malgun Gothic', '맑은 고딕', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    /* 상단 네비게이션 바 */
+    .topbar {
+      background: #ffffff;
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tab-btn {
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: #f8f9fa;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--subtext);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .tab-btn:hover {
+      background: #e8eaed;
+      color: var(--text);
+    }
+
+    .tab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .container {
+      max-width: 1220px;
+      margin: 20px auto;
+      padding: 0 16px 60px;
+    }
+
+    /* 패널 전환 */
+    .view-panel {
+      display: none;
+    }
+    .view-panel.active {
+      display: block;
+    }
+
+    /* 기본작업 2단 그리드 */
+    .base-grid {
+      display: grid;
+      grid-template-columns: 420px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .base-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 18px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0 0 14px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #202124;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 기본 정보 테이블 (D3:D14 재현) */
+    .info-form-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .info-form-table th {
+      width: 115px;
+      background: #dce6f2;
+      border: 1px solid #80868b;
+      padding: 7px 10px;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .info-form-table td {
+      border: 1px solid #80868b;
+      padding: 4px 6px;
+      background: #fff;
+    }
+
+    .info-form-table input {
+      width: 100%;
+      border: none;
+      outline: none;
+      font-size: 13px;
+      padding: 4px 6px;
+      background: transparent;
+      color: #000;
+    }
+
+    .info-form-table input:focus {
+      background: #e8f0fe;
+      border-radius: 3px;
+    }
+
+    /* 실행 버튼 & 진행현황 박스 (H18:J19 재현) */
+    .action-panel {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .action-btn {
+      width: 100%;
+      padding: 11px 14px;
+      border: none;
+      border-radius: 7px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s, transform 0.05s;
+      color: #fff;
+    }
+
+    .action-btn:active {
+      transform: scale(0.99);
+    }
+
+    .action-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-op { background: #1e8e3e; }
+    .btn-op:hover:not(:disabled) { background: #137333; }
+
+    .btn-cover { background: #1a73e8; }
+    .btn-cover:hover:not(:disabled) { background: #1557b0; }
+
+    .btn-detail { background: #673ab7; }
+    .btn-detail:hover:not(:disabled) { background: #512da8; }
+
+    .btn-att { background: #ea8600; }
+    .btn-att:hover:not(:disabled) { background: #c56f00; }
+
+    .progress-box {
+      margin-top: 14px;
+      border: 2px solid #202124;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .progress-title {
+      background: #f1f3f4;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      border-bottom: 1px solid #202124;
+      color: #202124;
+    }
+
+    .progress-bar-cell {
+      background: #ffe599;
+      padding: 9px 10px;
+      font-size: 12.5px;
+      font-weight: 400;
+      text-align: center;
+      color: #5f6368;
+      letter-spacing: 0.3px;
+    }
+
+    /* 차시별 시수 및 지도일시 테이블 (B18:F총 재현) */
+    .session-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: center;
+    }
+
+    .session-table th {
+      background: #dce6f2;
+      border: 1px solid #000;
+      padding: 8px 6px;
+      font-weight: 700;
+    }
+
+    .session-table td {
+      border: 1px solid #000;
+      padding: 4px;
+      height: 34px;
+    }
+
+    .session-table td.readonly-cell {
+      background: #efefef;
+      font-weight: 700;
+      color: #202124;
+    }
+
+    .session-table input.hours-input {
+      width: 100%;
+      height: 26px;
+      border: none;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      outline: none;
+      background: transparent;
+    }
+
+    .session-table td.guide-red {
+      border: 2.5px solid #ff0000 !important;
+    }
+
+    .session-table input.date-input {
+      width: 100%;
+      height: 26px;
+      border: none;
+      text-align: center;
+      font-size: 13px;
+      cursor: pointer;
+      outline: none;
+      background: transparent;
+    }
+
+    .session-table input.date-input:hover {
+      background: #e8f0fe;
+    }
+
+    .session-table tr.total-row td {
+      background: #efefef;
+      font-weight: 700;
+      border-top: 2px solid #000;
+      border-bottom: 2px solid #000;
+    }
+
+    .helper-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 12px;
+      color: var(--subtext);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .mini-btn {
+      padding: 5px 10px;
+      border: 1px solid var(--border);
+      background: #fff;
+      border-radius: 5px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .mini-btn:hover { background: #f1f3f4; }
+
+    /* API 키 설정 모달 / 접이식 */
+    .api-bar {
+      margin-top: 12px;
+      padding: 10px;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+    }
+    .api-bar summary {
+      cursor: pointer;
+      font-weight: 700;
+      color: var(--subtext);
+    }
+    .api-bar input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    /* 달력 모달 팝업 (openCalendarPopup 재현) */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .cal-modal {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      width: 310px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+      user-select: none;
+    }
+    .cal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .cal-header button {
+      background: #f1f3f4;
+      border: 1px solid #dadce0;
+      border-radius: 6px;
+      padding: 5px 12px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 14px;
+    }
+    .cal-header button:hover { background: #e8eaed; }
+    .cal-title { font-size: 16px; font-weight: bold; color: #202124; }
+    .cal-table { width: 100%; border-collapse: collapse; text-align: center; }
+    .cal-table th { font-size: 12px; color: #5f6368; padding: 6px 0; border-bottom: 1px solid #e0e0e0; }
+    .cal-table th:first-child { color: #d93025; }
+    .cal-table th:last-child { color: #1a73e8; }
+    .cal-table td { padding: 3px; }
+    .day-btn {
+      width: 34px; height: 34px; border: none; border-radius: 50%;
+      background: transparent; cursor: pointer; font-size: 13px; font-weight: 500;
+    }
+    .day-btn:hover { background: #e8f0fe; color: #1a73e8; font-weight: bold; }
+    .sun { color: #d93025; }
+    .sat { color: #1a73e8; }
+    .cal-footer {
+      margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
+      font-size: 11px; color: #5f6368;
+    }
+    .clear-btn {
+      background: #fff; border: 1px solid #dadce0; border-radius: 4px;
+      padding: 4px 8px; cursor: pointer; font-size: 11px; color: #d93025;
+    }
+    .clear-btn:hover { background: #fce8e6; }
+
+    /* =========================================================================
+       생성 결과 문서 출력 뷰 (A4 시트 레이아웃 재현)
+       ========================================================================= */
+    .doc-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #fff;
+      padding: 10px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+
+    .print-btn {
+      background: #202124;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .print-btn:hover { background: #3c4043; }
+
+    .a4-page {
+      width: 210mm;
+      min-height: 297mm;
+      background: #fff;
+      margin: 0 auto 24px;
+      padding: 14mm 14mm;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      color: #000;
+      position: relative;
+    }
+
+    .a4-page.landscape {
+      width: 297mm;
+      min-height: 210mm;
+      padding: 12mm 12mm;
+    }
+
+    .dashed-box {
+      border: 1.5px dashed #e06666;
+      padding: 6px 10px;
+      font-weight: 700;
+    }
+
+    .sheet-table {
+      width: 100%;
+      border-collapse: collapse;
+      border: 2px solid #000;
+    }
+    .sheet-table th, .sheet-table td {
+      border: 1px solid #000;
+      padding: 5px 6px;
+      vertical-align: middle;
+    }
+    .sheet-table th {
+      background: #dce6f2;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .empty-placeholder {
+      text-align: center;
+      padding: 80px 20px;
+      background: #fff;
+      border: 1px dashed var(--border);
+      border-radius: 10px;
+      color: var(--subtext);
+      font-size: 14px;
+    }
+
+    /* 인쇄 전용 스타일 */
+    @media print {
+      body { background: #fff; }
+      .topbar, .doc-toolbar, .no-print { display: none !important; }
+      .container { max-width: none; margin: 0; padding: 0; }
+      .a4-page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+      }
+      .a4-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 상단 메뉴바 -->
+  <header class="topbar">
+    <div class="brand">
+      <span>📋 지도안 / 운영계획서 / 출석부 자동 생성기</span>
+    </div>
+    <nav class="tabs">
+      <button class="tab-btn active" data-tab="base" onclick="switchTab('base')">📝 기본작업</button>
+      <button class="tab-btn" data-tab="op" onclick="switchTab('op')">0️⃣ 운영계획서</button>
+      <button class="tab-btn" data-tab="cover" onclick="switchTab('cover')">1️⃣ 표지 및 지도일지</button>
+      <button class="tab-btn" data-tab="detail" onclick="switchTab('detail')">2️⃣ 교수학습지도안</button>
+      <button class="tab-btn" data-tab="att" onclick="switchTab('att')">3️⃣ 출석부</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- ===================================================================
+         [탭 0] 기본작업 화면 (D3:D14 & B18:F총 & H18:J19 재현)
+         =================================================================== -->
+    <section id="panel-base" class="view-panel active">
+      <div class="base-grid">
+        <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
+        <div class="card">
+          <h2 class="card-title">
+            <span>1. 기본 정보 입력 (D3:D14)</span>
+            <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
+          </h2>
+
+          <table class="info-form-table">
+            <tbody>
+              <tr><th>학년도</th><td><input type="text" id="inp-year" value="2026" placeholder="예: 2026" /></td></tr>
+              <tr><th>학기</th><td><input type="text" id="inp-sem" value="2" placeholder="예: 2 (또는 2학기)" /></td></tr>
+              <tr><th>프로그램명</th><td><input type="text" id="inp-program" value="방과후학교 특강" placeholder="예: 방과후학교 특강" /></td></tr>
+              <tr><th>과목(반)명</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this)" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
+              <tr><th>담당교사</th><td><input type="text" id="inp-teacher" value="유성용" placeholder="예: 홍길동" /></td></tr>
+              <tr><th>수강인원</th><td><input type="text" id="inp-students" value="20" placeholder="숫자만 입력 (예: 20)" /></td></tr>
+              <tr><th>강의실</th><td><input type="text" id="inp-room" value="정보실 1" placeholder="예: 정보실 1" /></td></tr>
+              <tr><th>시작일</th><td><input type="text" id="inp-startDate" value="2026. 09. 01" placeholder="예: 2026. 09. 01" /></td></tr>
+              <tr><th>종료일</th><td><input type="text" id="inp-endDate" value="2026. 12. 22" placeholder="예: 2026. 12. 22" /></td></tr>
+              <tr><th>시작시간</th><td><input type="text" id="inp-startTime" value="16:40" placeholder="예: 16:40" /></td></tr>
+              <tr><th>종료시간</th><td><input type="text" id="inp-endTime" value="18:20" placeholder="예: 18:20" /></td></tr>
+              <tr><th>학교명</th><td><input type="text" id="inp-schoolName" value="순천공업고등학교" placeholder="예: 순천공업고등학교" /></td></tr>
+            </tbody>
+          </table>
+
+          <!-- 실행 버튼 4종 -->
+          <div class="action-panel">
+            <button class="action-btn btn-op" id="btn-run-op" onclick="generateOperationPlan()">0️⃣ 운영계획서 생성</button>
+            <button class="action-btn btn-cover" id="btn-run-cover" onclick="generateCoverAndSummary()">1️⃣ 표지 및 차시별 지도일지 생성</button>
+            <button class="action-btn btn-detail" id="btn-run-detail" onclick="generateDetailedPlans()">2️⃣ 교수-학습지도안(세부) 생성</button>
+            <button class="action-btn btn-att" id="btn-run-att" onclick="generateAttendanceOnly()">3️⃣ 출석부 생성</button>
+          </div>
+
+          <!-- H18:J19 실시간 프로그래스바 -->
+          <div class="progress-box">
+            <div class="progress-title" id="prog-title">진행현황</div>
+            <div class="progress-bar-cell" id="prog-bar">대기 중 (버튼을 누르면 진행 상황이 표시됩니다)</div>
+          </div>
+
+          <!-- API 키 설정 (코드 상단 키 기본 적용, 필요 시 변경 가능) -->
+          <details class="api-bar">
+            <summary>⚙️ Gemini API 키 설정 (기본 키 내장됨)</summary>
+            <input type="password" id="inp-apiKey" value="AQ.Ab8RN6JgZOqgNaj0VyOiPMzvDdnSc4ye_d_MXu7CfMv4uw-skQ" />
+          </details>
+        </div>
+
+        <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
+        <div class="card">
+          <h2 class="card-title">
+            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
+            <div>
+              <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
+              <button class="mini-btn" onclick="resetSessions()">초기화</button>
+            </div>
+          </h2>
+
+          <div class="helper-bar">
+            <span>💡 <b>시수(E열)</b>에 숫자를 입력하면 시작~종료 차시가 자동 계산되고 다음 입력칸(빨간 테두리)이 자동 생성됩니다.</span>
+            <span>📅 <b>지도일시(F열)</b>를 클릭하면 달력 팝업이 열립니다.</span>
+          </div>
+
+          <table class="session-table" id="session-table">
+            <thead>
+              <tr>
+                <th style="width: 55px;">시작</th>
+                <th style="width: 30px;">-</th>
+                <th style="width: 55px;">종료</th>
+                <th style="width: 85px;">시수</th>
+                <th>지도일시 (클릭하여 달력 선택)</th>
+              </tr>
+            </thead>
+            <tbody id="session-tbody"></tbody>
+            <tfoot>
+              <tr class="total-row">
+                <td colspan="3">총</td>
+                <td id="total-hours-cell">0</td>
+                <td style="text-align: left; padding-left: 12px; background: #fff; font-weight: 400; color: #5f6368;">시수 합계 자동 계산</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         [탭 1] 운영계획서 출력 화면
+         =================================================================== -->
+    <section id="panel-op" class="view-panel">
+      <div class="doc-toolbar no-print">
+        <span><b>운영계획서</b> 미리보기 (A4 세로 규격)</span>
+        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+      </div>
+      <div id="output-op">
+        <div class="empty-placeholder">'기본작업' 탭에서 <b>[0️⃣ 운영계획서 생성]</b> 버튼을 눌러주세요.</div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         [탭 2] 표지 및 차시별 지도일지 출력 화면
+         =================================================================== -->
+    <section id="panel-cover" class="view-panel">
+      <div class="doc-toolbar no-print">
+        <span><b>표지 및 차시별 지도일지</b> 미리보기 (A4 세로 2장 구성)</span>
+        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+      </div>
+      <div id="output-cover">
+        <div class="empty-placeholder">'기본작업' 탭에서 <b>[1️⃣ 표지 및 차시별 지도일지 생성]</b> 버튼을 눌러주세요.</div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         [탭 3] 교수-학습지도안(세부) 출력 화면
+         =================================================================== -->
+    <section id="panel-detail" class="view-panel">
+      <div class="doc-toolbar no-print">
+        <span><b>교수-학습지도안(세부)</b> 미리보기 (블록당 A4 세로 1장 고정)</span>
+        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+      </div>
+      <div id="output-detail">
+        <div class="empty-placeholder">'기본작업' 탭에서 <b>[2️⃣ 교수-학습지도안(세부) 생성]</b> 버튼을 눌러주세요.</div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         [탭 4] 출석부 출력 화면
+         =================================================================== -->
+    <section id="panel-att" class="view-panel">
+      <div class="doc-toolbar no-print">
+        <span><b>출석부</b> 미리보기 (A4 가로 규격 권장)</span>
+        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+      </div>
+      <div id="output-att">
+        <div class="empty-placeholder">'기본작업' 탭에서 <b>[3️⃣ 출석부 생성]</b> 버튼을 눌러주세요.</div>
+      </div>
+    </section>
+  </main>
+
+  <!-- 지도일시 달력 모달 팝업 (openCalendarPopup 재현) -->
+  <div class="modal-backdrop" id="cal-backdrop" onclick="if(event.target===this) closeCalendarModal()">
+    <div class="cal-modal">
+      <div class="cal-header">
+        <button type="button" onclick="changeMonth(-1)">◀</button>
+        <div class="cal-title" id="monthTitle"></div>
+        <button type="button" onclick="changeMonth(1)">▶</button>
+      </div>
+      <table class="cal-table">
+        <thead>
+          <tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr>
+        </thead>
+        <tbody id="calendarBody"></tbody>
+      </table>
+      <div class="cal-footer">
+        <span>대상 행: <b id="cal-target-label"></b></span>
+        <div>
+          <button type="button" class="clear-btn" onclick="clearSelectedDate()">날짜 지우기</button>
+          <button type="button" class="mini-btn" onclick="closeCalendarModal()">닫기</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ★ Google AI Studio에서 발급받은 Gemini API 키 (기본값)
+    const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6JgZOqgNaj0VyOiPMzvDdnSc4ye_d_MXu7CfMv4uw-skQ";
+
+    function getApiKey() {
+      const inp = document.getElementById("inp-apiKey");
+      return (inp && inp.value.trim()) ? inp.value.trim() : DEFAULT_GEMINI_API_KEY.trim();
+    }
+
+    // 탭 전환
+    function switchTab(tabKey) {
+      document.querySelectorAll(".tab-btn").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.tab === tabKey);
+      });
+      document.querySelectorAll(".view-panel").forEach(panel => {
+        panel.classList.toggle("active", panel.id === `panel-${tabKey}`);
+      });
+    }
+
+    // D6 셀 폰트 자동 조절 (adjustD6FontSize 재현)
+    function adjustSubjectFont(inputEl) {
+      const text = String(inputEl.value || "").trim();
+      const MAX_FONT = 13;
+      const MIN_FONT = 8;
+      if (!text) {
+        inputEl.style.fontSize = MAX_FONT + "px";
+        return;
+      }
+      const colWidthPx = inputEl.clientWidth || 250;
+      let weightedLen = 0;
+      for (let i = 0; i < text.length; i++) {
+        weightedLen += (text.charCodeAt(i) > 127) ? 1.0 : 0.58;
+      }
+      const idealFont = colWidthPx / (weightedLen * 1.38);
+      const finalFont = Math.max(MIN_FONT, Math.min(MAX_FONT, Number(idealFont.toFixed(1))));
+      inputEl.style.fontSize = finalFont + "px";
+    }
+
+    // =========================================================================
+    // ★ 실시간 프로그래스바 제어 유틸리티 (updateProgressBar / resetProgressBar)
+    // =========================================================================
+    function updateProgressBar(percent, statusText, state) {
+      const titleEl = document.getElementById("prog-title");
+      const barEl = document.getElementById("prog-bar");
+      if (!titleEl || !barEl) return;
+
+      const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+      const totalBlocks = 16;
+      const filledBlocks = Math.round((clamped / 100) * totalBlocks);
+      const emptyBlocks = totalBlocks - filledBlocks;
+      const barVisual = "█".repeat(filledBlocks) + "░".repeat(emptyBlocks) + ` ${clamped}%` + (statusText ? ` (${statusText})` : "");
+
+      let textColor = "#1A73E8"; // 진행 중: 파란색
+      let barBg = "#FFF2CC";     // 연노랑 막대 배경
+      if (state === "done") {
+        textColor = "#137333";   // 완료: 진한 초록색
+        barBg = "#E6F4EA";
+      } else if (state === "error") {
+        textColor = "#C5221F";   // 오류: 빨간색
+        barBg = "#FCE8E6";
+      }
+
+      titleEl.innerText = statusText ? `진행현황 - ${statusText}` : "진행현황";
+      titleEl.style.color = state === "error" ? "#C5221F" : "#202124";
+
+      barEl.innerText = barVisual;
+      barEl.style.background = barBg;
+      barEl.style.color = textColor;
+      barEl.style.fontWeight = "bold";
+    }
+
+    function resetProgressBar() {
+      const titleEl = document.getElementById("prog-title");
+      const barEl = document.getElementById("prog-bar");
+      if (!titleEl || !barEl) return;
+      titleEl.innerText = "진행현황";
+      titleEl.style.color = "#202124";
+      barEl.innerText = "대기 중 (버튼을 누르면 진행 상황이 표시됩니다)";
+      barEl.style.background = "#FFE599";
+      barEl.style.color = "#5F6368";
+      barEl.style.fontWeight = "normal";
+    }
+
+    function setButtonsDisabled(disabled) {
+      ["btn-run-op", "btn-run-cover", "btn-run-detail", "btn-run-att"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = disabled;
+      });
+    }
+
+    // 완료 팝업 후 시트(탭) 이동 (showCompletionAndSwitch 재현)
+    function showCompletionAndSwitch(tabKey, displaySheetName) {
+      setTimeout(() => {
+        alert(`${displaySheetName} 시트가 생성되었습니다.`);
+        switchTab(tabKey);
+      }, 80);
+    }
+
+    // =========================================================================
+    // 차시별 시수 및 지도일시 테이블 동적 관리 (onEdit / 빨간 가이드 재현)
+    // =========================================================================
+    let sessionRowsState = [
+      { hours: "2", dateObj: new Date(2026, 8, 1) },
+      { hours: "2", dateObj: new Date(2026, 8, 8) },
+      { hours: "2", dateObj: new Date(2026, 8, 15) },
+      { hours: "2", dateObj: new Date(2026, 8, 22) },
+      { hours: "", dateObj: null }
+    ];
+
+    function formatKoreanShortDate(dateObj) {
+      if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) return "";
+      const yy = String(dateObj.getFullYear()).slice(-2);
+      const mm = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const dd = String(dateObj.getDate()).padStart(2, "0");
+      const days = ["일", "월", "화", "수", "목", "금", "토"];
+      const ddd = days[dateObj.getDay()];
+      return `${yy}-${mm}-${dd}(${ddd})`;
+    }
+
+    function parseSheetDate(val) {
+      if (!val) return null;
+      if (val instanceof Date && !isNaN(val.getTime())) return val;
+      const str = String(val).replace(/\(.\)/g, "").trim();
+      const parts = str.split(/[\.\-\/]/).map(s => s.trim()).filter(Boolean);
+      if (parts.length >= 3) {
+        const y = Number(parts[0]);
+        const m = Number(parts[1]);
+        const d = Number(parts[2]);
+        if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+          const fullYear = y < 100 ? 2000 + y : y;
+          return new Date(fullYear, m - 1, d);
+        }
+      }
+      return null;
+    }
+
+    function renderSessionTable(focusIndex = null) {
+      const tbody = document.getElementById("session-tbody");
+      tbody.innerHTML = "";
+
+      let currentSession = 1;
+      let totalHours = 0;
+
+      // 첫 번째 빈 시수 칸 찾기 (빨간 테두리 가이드)
+      let guideIndex = sessionRowsState.length - 1;
+      for (let i = 0; i < sessionRowsState.length; i++) {
+        if (String(sessionRowsState[i].hours).trim() === "") {
+          guideIndex = i;
+          break;
+        }
+      }
+
+      sessionRowsState.forEach((row, idx) => {
+        const h = Number(row.hours);
+        let startStr = "";
+        let dashStr = "";
+        let endStr = "";
+
+        if (!isNaN(h) && h > 0) {
+          startStr = currentSession;
+          dashStr = "-";
+          endStr = currentSession + h - 1;
+          currentSession = endStr + 1;
+          totalHours += h;
+        }
+
+        const tr = document.createElement("tr");
+        const dateFormatted = formatKoreanShortDate(row.dateObj);
+        const guideClass = (idx === guideIndex) ? "guide-red" : "";
+
+        tr.innerHTML = `
+          <td class="readonly-cell">${startStr}</td>
+          <td class="readonly-cell">${dashStr}</td>
+          <td class="readonly-cell">${endStr}</td>
+          <td class="${guideClass}">
+            <input type="number" min="1" max="20" class="hours-input" data-idx="${idx}" value="${row.hours}" placeholder="시수" />
+          </td>
+          <td>
+            <input type="text" readonly class="date-input" data-idx="${idx}" value="${dateFormatted}" placeholder="클릭하여 날짜 선택" onclick="openCalendarModal(${idx})" />
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById("total-hours-cell").innerText = totalHours;
+
+      // 시수 입력 이벤트 바인딩 (onEdit 재현)
+      tbody.querySelectorAll(".hours-input").forEach(inp => {
+        inp.addEventListener("input", (e) => {
+          const idx = Number(e.target.dataset.idx);
+          const val = e.target.value.trim();
+          const num = Number(val);
+          sessionRowsState[idx].hours = val;
+
+          // 마지막 행에 양수 시수 입력 시 자동으로 새 행 추가
+          if (idx === sessionRowsState.length - 1 && val !== "" && !isNaN(num) && num > 0) {
+            sessionRowsState.push({ hours: "", dateObj: null });
+          }
+
+          // 값을 비우면 날짜도 지우고 연속 빈 행 정리
+          if (val === "" || isNaN(num) || num <= 0) {
+            sessionRowsState[idx].dateObj = null;
+            while (
+              sessionRowsState.length > 1 &&
+              String(sessionRowsState[sessionRowsState.length - 1].hours).trim() === "" &&
+              String(sessionRowsState[sessionRowsState.length - 2].hours).trim() === ""
+            ) {
+              sessionRowsState.pop();
+            }
+          }
+
+          renderSessionTable(idx);
+        });
+      });
+
+      if (focusIndex !== null) {
+        const targetInput = tbody.querySelector(`.hours-input[data-idx="${focusIndex}"]`);
+        if (targetInput) {
+          targetInput.focus();
+          const valLen = targetInput.value.length;
+          targetInput.setSelectionRange(valLen, valLen);
+        }
+      }
+    }
+
+    function addSessionRow() {
+      sessionRowsState.push({ hours: "", dateObj: null });
+      renderSessionTable(sessionRowsState.length - 1);
+    }
+
+    function resetSessions() {
+      sessionRowsState = [{ hours: "", dateObj: null }];
+      renderSessionTable(0);
+    }
+
+    function resetDemoData() {
+      document.getElementById("inp-year").value = "2026";
+      document.getElementById("inp-sem").value = "2";
+      document.getElementById("inp-program").value = "방과후학교 특강";
+      document.getElementById("inp-subject").value = "컴퓨터활용능력 2급";
+      document.getElementById("inp-teacher").value = "유성용";
+      document.getElementById("inp-students").value = "20";
+      document.getElementById("inp-room").value = "정보실 1";
+      document.getElementById("inp-startDate").value = "2026. 09. 01";
+      document.getElementById("inp-endDate").value = "2026. 12. 22";
+      document.getElementById("inp-startTime").value = "16:40";
+      document.getElementById("inp-endTime").value = "18:20";
+      document.getElementById("inp-schoolName").value = "순천공업고등학교";
+      sessionRowsState = [
+        { hours: "2", dateObj: new Date(2026, 8, 1) },
+        { hours: "2", dateObj: new Date(2026, 8, 8) },
+        { hours: "2", dateObj: new Date(2026, 8, 15) },
+        { hours: "2", dateObj: new Date(2026, 8, 22) },
+        { hours: "", dateObj: null }
+      ];
+      renderSessionTable();
+    }
+
+    // =========================================================================
+    // 달력 모달 팝업 (openCalendarPopup 재현)
+    // =========================================================================
+    let activeCalRowIdx = -1;
+    let curYear = 2026;
+    let curMonth = 9;
+
+    function openCalendarModal(rowIdx) {
+      activeCalRowIdx = rowIdx;
+      const d10Val = document.getElementById("inp-startDate").value;
+      const startDateObj = parseSheetDate(d10Val) || new Date();
+      const cellDateObj = sessionRowsState[rowIdx]?.dateObj;
+      const baseDate = cellDateObj || startDateObj;
+
+      curYear = baseDate.getFullYear();
+      curMonth = baseDate.getMonth() + 1;
+
+      document.getElementById("cal-target-label").innerText = `${rowIdx + 1}번째 행`;
+      renderCalendarGrid();
+      document.getElementById("cal-backdrop").classList.add("open");
+    }
+
+    function closeCalendarModal() {
+      document.getElementById("cal-backdrop").classList.remove("open");
+    }
+
+    function renderCalendarGrid() {
+      document.getElementById("monthTitle").innerText = `${curYear}년 ${curMonth}월`;
+      const firstDay = new Date(curYear, curMonth - 1, 1).getDay();
+      const lastDate = new Date(curYear, curMonth, 0).getDate();
+      const tbody = document.getElementById("calendarBody");
+      tbody.innerHTML = "";
+
+      let date = 1;
+      for (let r = 0; r < 6; r++) {
+        if (date > lastDate) break;
+        const tr = document.createElement("tr");
+        for (let c = 0; c < 7; c++) {
+          const td = document.createElement("td");
+          if ((r === 0 && c < firstDay) || date > lastDate) {
+            td.innerText = "";
+          } else {
+            const btn = document.createElement("button");
+            btn.type = "button";
+            btn.className = "day-btn" + (c === 0 ? " sun" : (c === 6 ? " sat" : ""));
+            btn.innerText = date;
+            const selectedDay = date;
+            btn.onclick = () => applySelectedDate(curYear, curMonth, selectedDay);
+            td.appendChild(btn);
+            date++;
+          }
+          tr.appendChild(td);
+        }
+        tbody.appendChild(tr);
+      }
+    }
+
+    function changeMonth(delta) {
+      curMonth += delta;
+      if (curMonth < 1) { curMonth = 12; curYear--; }
+      else if (curMonth > 12) { curMonth = 1; curYear++; }
+      renderCalendarGrid();
+    }
+
+    function applySelectedDate(y, m, d) {
+      if (activeCalRowIdx >= 0 && sessionRowsState[activeCalRowIdx]) {
+        sessionRowsState[activeCalRowIdx].dateObj = new Date(y, m - 1, d);
+        renderSessionTable();
+      }
+      closeCalendarModal();
+    }
+
+    function clearSelectedDate() {
+      if (activeCalRowIdx >= 0 && sessionRowsState[activeCalRowIdx]) {
+        sessionRowsState[activeCalRowIdx].dateObj = null;
+        renderSessionTable();
+      }
+      closeCalendarModal();
+    }
+
+    // =========================================================================
+    // 공통 데이터 로더 (readBaseTaskData 재현)
+    // =========================================================================
+    function readBaseTaskData() {
+      const year       = document.getElementById("inp-year").value.trim();
+      const rawSem     = document.getElementById("inp-sem").value.trim();
+      const program    = document.getElementById("inp-program").value.trim();
+      const subject    = document.getElementById("inp-subject").value.trim();
+      const teacher    = document.getElementById("inp-teacher").value.trim();
+      const students   = document.getElementById("inp-students").value.trim();
+      const room       = document.getElementById("inp-room").value.trim();
+      const startDate  = document.getElementById("inp-startDate").value.trim();
+      const endDate    = document.getElementById("inp-endDate").value.trim();
+      const startTime  = document.getElementById("inp-startTime").value.trim();
+      const endTime    = document.getElementById("inp-endTime").value.trim();
+      const schoolName = document.getElementById("inp-schoolName").value.trim();
+
+      if (!year) {
+        updateProgressBar(0, "오류: 학년도 누락", "error");
+        alert("학년도를 입력해주세요.");
+        return null;
+      }
+
+      const semesterText = rawSem ? (rawSem.endsWith("학기") ? rawSem : `${rawSem}학기`) : "";
+      const timeRangeText = (startTime && endTime) ? `${startTime}~${endTime}` : (startTime || endTime || "");
+
+      const sessions = [];
+      let currentSession = 1;
+      let totalHoursNum = 0;
+
+      for (let i = 0; i < sessionRowsState.length; i++) {
+        const row = sessionRowsState[i];
+        const h = Number(row.hours);
+        if (!isNaN(h) && h > 0) {
+          const startS = String(currentSession);
+          const endS = String(currentSession + h - 1);
+          currentSession = Number(endS) + 1;
+          totalHoursNum += h;
+
+          const dateStr = formatKoreanShortDate(row.dateObj);
+          sessions.push({
+            start: startS,
+            dash: "-",
+            end: endS,
+            hours: String(h),
+            date: dateStr,
+            dateObj: row.dateObj
+          });
+        }
+      }
+
+      if (sessions.length === 0) {
+        updateProgressBar(0, "오류: 시수 미입력", "error");
+        alert("시수가 입력된 차시 행이 없습니다.");
+        return null;
+      }
+
+      return {
+        year, rawSem, program, subject, teacher, students, room,
+        startDate, endDate, startTime, endTime, schoolName,
+        semesterText, timeRangeText, sessions, totalHours: String(totalHoursNum)
+      };
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/\n/g, "<br>");
+    }
+
+    function formatPeriodText(sDate, eDate, hours, spaceBeforeParen = false) {
+      const parseKoreanDate = (str) => {
+        const parts = str.split(".").map(s => s.trim()).filter(Boolean);
+        return parts.length >= 3 ? { y: parts[0], m: Number(parts[1]), d: Number(parts[2]) } : null;
+      };
+      const s = parseKoreanDate(sDate), e = parseKoreanDate(eDate);
+      if (s && e) {
+        const endStr = (s.y === e.y) ? `${e.m}월 ${e.d}일` : `${e.y}년 ${e.m}월 ${e.d}일`;
+        return spaceBeforeParen
+          ? `${s.y}년 ${s.m}월 ${s.d}일 ~ ${endStr} (${hours}차시)`
+          : `${s.y}년 ${s.m}월 ${s.d}일 ~ ${endStr}( ${hours}차시)`;
+      }
+      return spaceBeforeParen
+        ? `${sDate} ~ ${eDate} (${hours}차시)`
+        : `${sDate} ~ ${eDate}( ${hours}차시)`;
+    }
+
+    // =========================================================================
+    // 공통 유틸: gemini-3.8-flash 최우선 고정 + 최신 3.x 이상 Flash 모델 동적 조회
+    // =========================================================================
+    async function getAvailableFlashModels(apiKey) {
+      let candidateModels = ["gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.0-flash"];
+      try {
+        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          const filtered = (listData.models || [])
+            .filter(m =>
+              m.supportedGenerationMethods &&
+              m.supportedGenerationMethods.includes("generateContent") &&
+              m.name.includes("flash") &&
+              !m.name.includes("omni") &&
+              !m.name.includes("tts") &&
+              !m.name.includes("image") &&
+              !m.name.includes("audio") &&
+              !m.name.includes("thinking") &&
+              !m.name.includes("1.5") &&
+              !m.name.includes("2.0") &&
+              !m.name.includes("2.5")
+            )
+            .map(m => m.name.replace("models/", ""))
+            .sort((a, b) => {
+              if (a === "gemini-3.8-flash") return -1;
+              if (b === "gemini-3.8-flash") return 1;
+              return b.localeCompare(a);
+            });
+
+          if (filtered.length > 0) {
+            candidateModels = filtered;
+          }
+        }
+      } catch (e) {}
+      return candidateModels;
+    }
+
+    // =========================================================================
+    // 공통 유틸: 모델 폴백(재시도) 포함 Gemini JSON 호출기
+    // =========================================================================
+    async function callGeminiWithFallback(apiKey, candidateModels, prompt, schema) {
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 8192,
+          responseMimeType: "application/json",
+          responseSchema: schema
+        }
+      };
+
+      let lastErrorCode = "";
+      let lastErrorMsg = "";
+      let lastModel = "";
+
+      for (let i = 0; i < candidateModels.length; i++) {
+        const modelName = candidateModels[i];
+        lastModel = modelName;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+        try {
+          const response = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          const responseCode = response.status;
+          const responseText = await response.text();
+
+          if (responseCode === 200) {
+            const json = JSON.parse(responseText);
+            const rawText = json.candidates[0].content.parts[0].text;
+            return JSON.parse(rawText);
+          } else {
+            lastErrorCode = responseCode;
+            try {
+              const errObj = JSON.parse(responseText);
+              lastErrorMsg = errObj.error ? errObj.error.message : responseText;
+            } catch (parseErr) {
+              lastErrorMsg = responseText;
+            }
+            continue;
+          }
+        } catch (err) {
+          lastErrorCode = "예외";
+          lastErrorMsg = String(err);
+        }
+      }
+
+      return { code: lastErrorCode, message: lastErrorMsg, model: lastModel };
+    }
+
+    // =========================================================================
+    // Gemini 호출: '운영계획서' 전용 데이터 생성 (프롬프트 100% 유지)
+    // =========================================================================
+    async function fetchGeminiOperationPlan(subject, program, semesterText, sessions, existingTopics, candidateModels) {
+      const apiKey = getApiKey();
+      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
+        return {
+          overallGoal: "API 키를 입력해주세요.",
+          planItems: sessions.map(() => ({ topic: "", content: "", materials: "", remarks: "" }))
+        };
+      }
+
+      const sessionSummary = sessions.map((s, idx) => {
+        const refTopic = (existingTopics && existingTopics[idx]) ? ` | 기존주제참고: ${existingTopics[idx]}` : "";
+        return `${idx + 1}번째 블록: ${s.start}~${s.end}차시 (${s.hours}시수)${refTopic}`;
+      }).join("\n");
+      const semContext = semesterText ? ` (${semesterText} 편성 기준)` : "";
+
+      const prompt = `당신은 대한민국 고등학교 교사입니다. 다음 조건에 맞춰 '${subject}'${semContext}(${program})의 방과후/특강 운영 계획서를 작성해주세요.
+
+[작성 규칙]
+1. overallGoal (지도 목표):
+  - 과목명('${subject}')과 전체 차시의 학습 주제를 종합하여 학생이 도달해야 할 핵심 성취 목표를 반드시 **"~할 수 있다."**로 끝나는 간결한 1~2문장(줄바꿈 \\n 구분, 공백 포함 90자 이내)으로 작성하세요.
+2. planItems (차시별 지도 계획 - 정확히 ${sessions.length}개 배열):
+  - topic (학습 주제): 단원명 및 핵심 주제를 간결하게 작성 (예: "1. 다항식의 연산\\n - 다항식의 덧셈과 뺄셈")
+  - content (학습 내용): 위 학습 주제를 분석하여 실제 수업에서 다룰 핵심 개념·원리·실습 내용을 **개요식('- ...') 2줄 이내(공백 포함 45자 이내)**로 간단명료하게 작성 (예: "- 동류항의 개념 이해 및 덧셈·뺄셈 연산\\n- 기본 예제 풀이 및 연산 법칙 적용")
+  - materials (준비물): 칸 폭이 좁으므로 반드시 **핵심 단어 1~2개(공백 포함 8자 이내)**로 최소화하여 작성 (예: "교재, 활동지", "컴퓨터, PPT", "학습지")
+  - remarks (비고): 칸 폭이 좁으므로 반드시 **핵심 키워드 1개(공백 포함 7자 이내)**로 최소화하여 작성 (예: "수준별 지도", "실습 점검", "형성평가", "모둠 활동")
+3. 반드시 지정된 JSON 형식으로만 응답하세요.
+
+[차시 블록 정보]
+${sessionSummary}`;
+
+      const schema = {
+        type: "OBJECT",
+        properties: {
+          overallGoal: { type: "STRING" },
+          planItems: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                topic: { type: "STRING" },
+                content: { type: "STRING" },
+                materials: { type: "STRING" },
+                remarks: { type: "STRING" }
+              },
+              required: ["topic", "content", "materials", "remarks"]
+            }
+          }
+        },
+        required: ["overallGoal", "planItems"]
+      };
+
+      const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+      if (result && result.overallGoal && Array.isArray(result.planItems)) {
+        return result;
+      }
+
+      return {
+        overallGoal: `API 오류 (${result.code}): ${result.message ? result.message.slice(0, 80) : ""}`,
+        planItems: sessions.map(() => ({
+          topic: "생성 오류",
+          content: "-",
+          materials: "",
+          remarks: ""
+        }))
+      };
+    }
+
+    // =========================================================================
+    // [1단계 Gemini 호출] 차시별 총괄표 생성 (프롬프트 100% 유지)
+    // =========================================================================
+    async function fetchGeminiLessonPlan(subject, program, semesterText, sessions, candidateModels) {
+      const apiKey = getApiKey();
+      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
+        return sessions.map(() => ({
+          topic: "API 키 미입력",
+          objective: "상단 설정에서 GEMINI_API_KEY를 입력하세요.",
+          notes: ""
+        }));
+      }
+
+      const sessionSummary = sessions.map((s, idx) =>
+        `${idx + 1}번째 블록: ${s.start}~${s.end}차시 (${s.hours}시수)`
+      ).join("\n");
+      const semContext = semesterText ? ` (${semesterText} 편성 기준)` : "";
+
+      const prompt = `당신은 대한민국 고등학교 교사입니다. 다음 조건에 맞춰 '${subject}'${semContext}(${program})의 차시별 지도 내용을 작성해주세요.
+
+[작성 조건]
+1. 과목명('${subject}')이 2022 개정 고등학교 교육과정(보통교과 또는 전문교과)에 포함된 과목이라면 해당 교육과정의 성취기준과 핵심 아이디어 및 ${semesterText || "해당 학기"} 진도 흐름을 바탕으로 구성하고, 방과후/자격증/특강 과목이라면 고등학교 수준에 맞는 체계적인 단계별 커리큘럼으로 구성하세요.
+2. 제시된 총 ${sessions.length}개 블록의 차시 및 시수 분량에 정확히 맞추어 작성하세요.
+3. 반드시 아래 작성 형식과 분량 규칙을 엄격하게 지켜주세요.
+  - '학습 주제(topic)': "1. 대단원명\\n - 핵심 소주제" 형태의 구체적인 개조식으로 작성 (예: "1. 다항식의 연산\\n - 다항식의 덧셈과 뺄셈")
+  - '학습 목표(objective)': 반드시 성취기준 진술 방식인 "~할 수 있다."로 끝나는 구체적인 문장 1~2개로 작성하고, 여러 개일 경우 줄바꿈(\\n)으로 구분 (예: "- 다항식의 사칙연산 원리를 이해하고 계산할 수 있다.\\n- 곱셈 공식을 활용하여 식을 전개할 수 있다.")
+  - '지도상 유의점 및 자료(notes)': 칸 폭이 매우 좁으므로 반드시 **핵심 자료명이나 키워드 1줄(공백 포함 10자 이내)**로 최소화하여 작성 (예: "활동지, PPT", "실습실 점검", "모둠 활동지")
+4. 반드시 아래 JSON 배열 형식으로만 응답하세요. 배열 길이는 정확히 ${sessions.length}개여야 합니다.
+
+[차시 블록 정보]
+${sessionSummary}`;
+
+      const schema = {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            topic: { type: "STRING" },
+            objective: { type: "STRING" },
+            notes: { type: "STRING" }
+          },
+          required: ["topic", "objective", "notes"]
+        }
+      };
+
+      const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+      if (Array.isArray(result)) return result;
+
+      return sessions.map(() => ({
+        topic: `API 오류 (${result.code})`,
+        objective: String(result.message || "").slice(0, 150),
+        notes: `시도: ${result.model}`
+      }));
+    }
+
+    // =========================================================================
+    // [2단계 Gemini 호출] 세부 교수-학습지도안 '학습(활동) 내용' (프롬프트 100% 유지)
+    // =========================================================================
+    async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, candidateModels) {
+      const apiKey = getApiKey();
+      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
+        return sessions.map(() => "API 키를 입력해주세요.");
+      }
+
+      const allResults = [];
+      const batchSize = 4;
+
+      for (let startIdx = 0; startIdx < sessions.length; startIdx += batchSize) {
+        const endIdx = Math.min(startIdx + batchSize, sessions.length);
+        const pct = 25 + Math.round((startIdx / sessions.length) * 60);
+        updateProgressBar(pct, `${startIdx + 1}~${endIdx}/${sessions.length}장 작성`, "running");
+
+        const chunkSessions = sessions.slice(startIdx, endIdx);
+        const blockDetails = chunkSessions.map((s, idx) => {
+          const globalIdx = startIdx + idx;
+          const item = aiPlanList[globalIdx] || { topic: "", objective: "", notes: "" };
+          return `[${idx + 1}번 지도안] 차시: ${s.start}~${s.end}차시(${s.hours}시수) | 주제: ${item.topic.replace(/\n/g, " ")} | 학습목표: ${item.objective.replace(/\n/g, " ")}`;
+        }).join("\n");
+
+        const prompt = `당신은 대한민국 고등학교 교사입니다. '${subject}'(${semesterText} ${program})의 각 블록별 주제와 학습목표를 분석하여, 실제 수업에서 바로 활용할 수 있는 '실제 학습 내용'과 '학습 활동 안내'를 작성해주세요.
+
+[작성 규칙 - 매우 중요]
+1. **'도입', '전개', '정리'라는 단계 구분 제목을 절대 사용하지 마세요.** 하나의 통합된 개괄식 구조 안에 '실제 학습할 핵심 교과 내용'과 '수업 활동 안내'를 자연스럽게 이어서 구성하세요.
+2. **절대 줄글(서술형 문단)로 쓰지 마세요.** 반드시 항목별 기호(■, 1., -, •)와 명사형/간결한 개조식 종결("~확인", "~이해", "~설명", "~실습하기", "~해결하기")을 사용한 **개괄식(개조식)**으로만 작성하세요.
+3. **글자 수 최소 하한선 엄수:** 각 지도안당 전체 글자 수는 **반드시 공백 포함 최소 1,200자 이상(1,220자 ~ 1,350자 범위)**이 되도록 실제 교과 개념·공식·성질·원리·기능·예제 유형 및 학생 활동 절차를 풍부하고 구체적으로 작성하세요.
+4. 반드시 아래 2가지 대항목 구조를 갖추어 줄바꿈(\\n)으로 깔끔하게 구분하세요.
+
+[필수 출력 구조 예시]
+■ 핵심 학습 내용
+1. (주요 개념/원리/기능명 1)
+  - (실제 수업에서 가르칠 핵심 정의, 공식, 성질, 명령어·함수 구조 등 구체적 내용)
+  - (세부 하위 개념 및 핵심 포인트 정리)
+  - (대표 예제 유형 및 단계별 풀이·적용 원리)
+2. (주요 개념/원리/기능명 2)
+  - (심화 개념, 조건별 분기, 오류 방지 및 주의 사항)
+  - (실전 문제 및 실습 과제 적용 기준)
+3. (주요 개념/원리/기능명 3)
+  - (단원 핵심 연계 개념 및 응용 확장 포인트)
+
+■ 학습 활동 및 지도 안내
+1. 전시 학습 점검 및 학습 목표 안내
+  - (이전 차시 핵심 개념 확인 질문 및 본시 학습 주제의 필요성·실생활 연계 사례 제시)
+  - (본시 성취기준 및 세부 학습 활동 순서 안내)
+2. 핵심 원리 탐구 및 시범 실습
+  - (핵심 개념·원리 판서/PPT 설명 및 기본 예제 단계별 풀이 시범)
+  - (학생 개별 개념 확인 및 핵심 원리 노트 구조화 정리)
+3. 수준별 문제 해결 및 심화 탐구 활동
+  - (기본·심화 학습지 또는 실습 과제를 통한 단계별 문제 해결 활동 진행)
+  - (모둠별 토의·상호 피드백 및 교사 순회 지도를 통한 개별 오개념 교정)
+4. 학습 내용 정리 및 형성평가
+  - (본시 핵심 개념·공식·절차 요약 정리 및 형성평가 문항 해결)
+  - (학습 결과 성찰, 과제 안내 및 다음 차시 학습 내용 예고)
+
+5. 반드시 위 형식을 따른 JSON 문자열 배열로만 응답하세요. 배열 길이는 정확히 ${chunkSessions.length}개여야 합니다.
+
+[차시별 주제 및 학습목표 목록]
+${blockDetails}`;
+
+        const schema = {
+          type: "ARRAY",
+          items: { type: "STRING" }
+        };
+
+        const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+        if (Array.isArray(result)) {
+          for (let k = 0; k < chunkSessions.length; k++) {
+            allResults.push(result[k] || "");
+          }
+        } else {
+          for (let k = 0; k < chunkSessions.length; k++) {
+            allResults.push(`세부 지도안 생성 오류 (${result.code}): ${result.message}`);
+          }
+        }
+      }
+
+      return allResults;
+    }
+
+    // =========================================================================
+    // [버튼 0] '운영계획서' 생성
+    // =========================================================================
+    async function generateOperationPlan() {
+      const data = readBaseTaskData();
+      if (!data) return;
+
+      setButtonsDisabled(true);
+      updateProgressBar(10, "데이터 분석", "running");
+
+      const {
+        year, program, subject, teacher, students, room,
+        startDate, endDate, schoolName, semesterText, sessions, totalHours
+      } = data;
+
+      updateProgressBar(25, "AI 모델 연결", "running");
+      const candidateModels = await getAvailableFlashModels(getApiKey());
+
+      updateProgressBar(45, "운영계획서 AI 작성", "running");
+      const opPlanData = await fetchGeminiOperationPlan(subject, program, semesterText, sessions, null, candidateModels);
+
+      updateProgressBar(75, "시트 서식 구성", "running");
+
+      const headerLineText = semesterText
+        ? `${year}학년도 ${semesterText} ${program}`
+        : `${year}학년도 ${program}`;
+      const formattedTeacher = teacher ? `${teacher.split("").join(" ")} (인)` : "(인)";
+      const periodText = formatPeriodText(startDate, endDate, totalHours, true);
+      const displayRowCount = Math.max(10, sessions.length);
+
+      let rowsHtml = "";
+      for (let i = 0; i < displayRowCount; i++) {
+        if (i < sessions.length) {
+          const s = sessions[i];
+          const item = (opPlanData.planItems && opPlanData.planItems[i]) || {
+            topic: "", content: "", materials: "", remarks: ""
+          };
+          rowsHtml += `
+            <tr style="height: 34px;">
+              <td style="width: 24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.start)}</td>
+              <td style="width: 14px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.dash)}</td>
+              <td style="width: 24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.end)}</td>
+              <td style="width: 38px; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.hours)}</td>
+              <td style="width: 185px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(item.topic)}</td>
+              <td style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(item.content)}</td>
+              <td style="width: 82px; text-align:center; font-size:10.5px;">${escapeHtml(item.materials)}</td>
+              <td style="width: 72px; text-align:center; font-size:10.5px;">${escapeHtml(item.remarks)}</td>
+            </tr>
+          `;
+        } else {
+          rowsHtml += `
+            <tr style="height: 32px;">
+              <td style="width: 24px; background:#efefef; text-align:center; border-right:1px dotted #666;"></td>
+              <td style="width: 14px; background:#efefef; text-align:center; border-right:1px dotted #666;">-</td>
+              <td style="width: 24px; background:#efefef; text-align:center;"></td>
+              <td></td><td></td><td></td><td></td><td></td>
+            </tr>
+          `;
+        }
+      }
+
+      document.getElementById("output-op").innerHTML = `
+        <div class="a4-page">
+          <div class="dashed-box" style="display:inline-block; min-width: 65%; text-align:center; font-size:15px; margin-bottom:10px;">
+            ${escapeHtml(headerLineText)}
+          </div>
+          <div class="dashed-box" style="text-align:center; font-size:18px; margin-bottom:14px;">
+            <span style="color:#0000ff;">${escapeHtml(subject)}</span> 반 운영 계획서
+          </div>
+
+          <table class="sheet-table" style="font-size:13px; margin-bottom:14px;">
+            <tbody>
+              <tr style="height:30px;">
+                <th style="width: 155px; background:#fff;">담당 교사</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(formattedTeacher)}</td>
+              </tr>
+              <tr style="height:30px;">
+                <th style="background:#fff;">수강 인원</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
+              </tr>
+              <tr style="height:30px;">
+                <th style="background:#fff;">강 의 실</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
+              </tr>
+              <tr style="height:30px;">
+                <th style="background:#fff;">지도 기간</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
+              </tr>
+              <tr style="height:44px;">
+                <th style="background:#fff;">지도 목표</th>
+                <td style="text-align:left; font-size:12px; line-height:1.4; padding:6px 10px;">${escapeHtml(opPlanData.overallGoal)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="border:2px solid #000; border-bottom:none; text-align:center; font-size:15px; font-weight:bold; padding:7px 0;">
+            차시별 지도 계획
+          </div>
+          <table class="sheet-table">
+            <thead>
+              <tr style="height:32px; font-size:12px;">
+                <th colspan="3">차시</th>
+                <th>시수</th>
+                <th>학습 주제</th>
+                <th>학습 내용</th>
+                <th>준비물</th>
+                <th>비고</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+              <tr style="height:30px; font-weight:bold; font-size:12px;">
+                <td colspan="3" style="background:#efefef; text-align:center;">총</td>
+                <td style="text-align:center;">${escapeHtml(totalHours)}</td>
+                <td colspan="4" style="text-align:left; padding-left:8px;">시수</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="text-align:center; font-size:20px; font-weight:bold; margin-top:20px; letter-spacing:4px;">
+            ${escapeHtml(schoolName)}
+          </div>
+        </div>
+      `;
+
+      setButtonsDisabled(false);
+      updateProgressBar(100, "운영계획서 완료", "done");
+      showCompletionAndSwitch("op", "운영계획서");
+    }
+
+    // =========================================================================
+    // [버튼 1] '표지 및 차시별 지도일지' 생성
+    // =========================================================================
+    async function generateCoverAndSummary() {
+      const data = readBaseTaskData();
+      if (!data) return;
+
+      setButtonsDisabled(true);
+      updateProgressBar(10, "데이터 분석", "running");
+
+      const {
+        year, program, subject, teacher, students, room,
+        startDate, endDate, startTime, endTime, schoolName,
+        semesterText, sessions, totalHours
+      } = data;
+
+      updateProgressBar(25, "AI 모델 연결", "running");
+      const candidateModels = await getAvailableFlashModels(getApiKey());
+
+      updateProgressBar(45, "차시별 지도일지 작성", "running");
+      const aiPlanList = await fetchGeminiLessonPlan(subject, program, semesterText, sessions, candidateModels);
+
+      updateProgressBar(75, "표지 및 총괄표 구성", "running");
+
+      const headerLineText = semesterText
+        ? `${year}학년도 ${semesterText} ${program}`
+        : `${year}학년도 ${program}`;
+      const formattedCoverTeacher = teacher ? `${teacher.split("").join(" ")} (인)` : "(인)";
+      const periodText = formatPeriodText(startDate, endDate, totalHours, false);
+      const timeText = (startTime && endTime) ? `${startTime} ~ ${endTime}` : (startTime || endTime || "");
+
+      let planRowsHtml = "";
+      sessions.forEach((s, i) => {
+        const aiItem = aiPlanList[i] || { topic: "", objective: "", notes: "" };
+        planRowsHtml += `
+          <tr style="height:36px;">
+            <td style="width:24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.start)}</td>
+            <td style="width:14px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.dash)}</td>
+            <td style="width:24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.end)}</td>
+            <td style="width:36px; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.hours)}</td>
+            <td style="width:98px; text-align:center; font-size:11px;">${escapeHtml(s.date)}</td>
+            <td style="width:145px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(aiItem.topic)}</td>
+            <td style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(aiItem.objective)}</td>
+            <td style="width:88px; text-align:left; font-size:10px; line-height:1.3;">${escapeHtml(aiItem.notes)}</td>
+          </tr>
+        `;
+      });
+
+      document.getElementById("output-cover").innerHTML = `
+        <!-- 1페이지: 표지 -->
+        <div class="a4-page" style="display:flex; flex-direction:column; justify-content:space-between; padding:22mm 18mm;">
+          <div>
+            <div class="dashed-box" style="font-size:18px; text-align:left; margin-bottom:24px;">
+              ${escapeHtml(headerLineText)}
+            </div>
+            <div class="dashed-box" style="font-size:22px; text-align:center; padding:14px 10px;">
+              <span style="color:#0000ff;">${escapeHtml(subject)}</span> 반 교수-학습 지도안
+            </div>
+          </div>
+
+          <table class="sheet-table" style="font-size:16px; margin: 20px 0;">
+            <tbody>
+              <tr style="height:56px;">
+                <th style="width:42%; background:#fff;">담당 교사</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(formattedCoverTeacher)}</td>
+              </tr>
+              <tr style="height:56px;">
+                <th style="background:#fff;">수강 인원</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
+              </tr>
+              <tr style="height:56px;">
+                <th style="background:#fff;">강 의 실</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
+              </tr>
+              <tr style="height:56px;">
+                <th style="background:#fff;">지도 기간</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
+              </tr>
+              <tr style="height:56px;">
+                <th style="background:#fff;">지도 시간</th>
+                <td style="text-align:center; font-weight:bold;">${escapeHtml(timeText)}</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div style="text-align:center; font-size:24px; font-weight:bold; letter-spacing:6px; padding-bottom:10px;">
+            ${escapeHtml(schoolName)}
+          </div>
+        </div>
+
+        <!-- 2페이지: 차시별 지도 내용 -->
+        <div class="a4-page">
+          <div style="border:2px solid #000; border-bottom:none; text-align:center; font-size:17px; font-weight:bold; padding:9px 0;">
+            차시별 지도 내용
+          </div>
+          <table class="sheet-table">
+            <thead>
+              <tr style="height:36px; font-size:12px;">
+                <th colspan="3">차시</th>
+                <th>시수</th>
+                <th>지도일시</th>
+                <th>학습 주제</th>
+                <th>학습 목표</th>
+                <th>유의점<br>및 자료</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${planRowsHtml}
+              <tr style="height:34px; font-weight:bold; font-size:12px;">
+                <td colspan="3" style="background:#efefef; text-align:center;">총</td>
+                <td style="text-align:center;">${escapeHtml(totalHours)}</td>
+                <td colspan="4" style="text-align:left; padding-left:10px;">시수</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      setButtonsDisabled(false);
+      updateProgressBar(100, "표지·지도일지 완료", "done");
+      showCompletionAndSwitch("cover", "표지 및 지도일지");
+    }
+
+    // =========================================================================
+    // [버튼 2] '교수학습지도안(세부)' 생성
+    // =========================================================================
+    async function generateDetailedPlans() {
+      const data = readBaseTaskData();
+      if (!data) return;
+
+      setButtonsDisabled(true);
+      updateProgressBar(5, "데이터 분석", "running");
+
+      const { program, subject, semesterText, timeRangeText, sessions } = data;
+      const candidateModels = await getAvailableFlashModels(getApiKey());
+
+      updateProgressBar(15, "학습 주제 구성", "running");
+      const aiPlanList = await fetchGeminiLessonPlan(subject, program, semesterText, sessions, candidateModels);
+
+      const detailedActivities = await fetchGeminiDetailedActivities(
+        subject, program, semesterText, sessions, aiPlanList, candidateModels
+      );
+
+      updateProgressBar(90, "시트 서식 구성", "running");
+
+      const prefixPart = semesterText ? `${semesterText}  ${program} ( ` : `${program} ( `;
+      const suffixPart = ` )반 교수-학습지도안`;
+
+      let cumulativeHours = 0;
+      let pagesHtml = "";
+
+      sessions.forEach((s, i) => {
+        const aiItem = aiPlanList[i] || { topic: "", objective: "", notes: "" };
+        const activityText = detailedActivities[i] || "";
+        cumulativeHours += Number(s.hours) || 0;
+
+        pagesHtml += `
+          <div class="a4-page">
+            <div class="dashed-box" style="text-align:center; font-size:18px; margin-bottom:12px;">
+              ${escapeHtml(prefixPart)}<span style="color:#0000ff;">${escapeHtml(subject)}</span>${escapeHtml(suffixPart)}
+            </div>
+
+            <table class="sheet-table" style="font-size:12.5px;">
+              <tbody>
+                <tr style="height:36px;">
+                  <th style="width:130px; background:#fff;">지도일시</th>
+                  <td style="width:140px; text-align:center; font-weight:bold;">${escapeHtml(s.date.replace(/\n/g, ", "))}</td>
+                  <th style="width:95px; background:#fff;">지도시간</th>
+                  <td style="width:130px; text-align:center; font-weight:bold;">${escapeHtml(timeRangeText)}</td>
+                  <th style="width:80px; background:#fff;">차  시</th>
+                  <td style="text-align:center; font-weight:bold;">${escapeHtml(`${s.start} - ${s.end} / ${cumulativeHours}`)}</td>
+                </tr>
+                <tr style="height:40px;">
+                  <th style="background:#fff;">주   제</th>
+                  <td colspan="5" style="text-align:left; font-weight:bold; padding-left:10px;">${escapeHtml(aiItem.topic.replace(/\n/g, "  "))}</td>
+                </tr>
+                <tr style="height:44px;">
+                  <th style="background:#fff;">학습 목표</th>
+                  <td colspan="5" style="text-align:left; font-size:12px; padding:6px 10px; line-height:1.4;">${escapeHtml(aiItem.objective)}</td>
+                </tr>
+                <tr style="height:38px;">
+                  <th style="background:#fff; font-size:11.5px;">지도상 유의점 및 자료</th>
+                  <td colspan="5" style="text-align:left; font-size:12px; padding-left:10px;">${escapeHtml(aiItem.notes)}</td>
+                </tr>
+                <tr style="height:34px;">
+                  <th colspan="6" style="background:#fff; font-size:14px;">학 습 (활 동) &nbsp;&nbsp; 내 &nbsp; 용</th>
+                </tr>
+                <tr style="height:680px;">
+                  <td colspan="6" style="vertical-align:top; text-align:left; font-size:11px; line-height:1.48; padding:12px 14px;">
+                    ${escapeHtml(activityText)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        `;
+      });
+
+      document.getElementById("output-detail").innerHTML = pagesHtml;
+
+      setButtonsDisabled(false);
+      updateProgressBar(100, `지도안 ${sessions.length}장 완료`, "done");
+      showCompletionAndSwitch("detail", "교수학습지도안");
+    }
+
+    // =========================================================================
+    // [버튼 3] '출석부' 생성
+    // =========================================================================
+    function generateAttendanceOnly() {
+      const data = readBaseTaskData();
+      if (!data) return;
+
+      setButtonsDisabled(true);
+      updateProgressBar(20, "출석 데이터 확인", "running");
+
+      const {
+        year, semesterText, program, subject, teacher,
+        students, schoolName, sessions, totalHours
+      } = data;
+
+      updateProgressBar(55, "출석부 양식 생성", "running");
+
+      const sessionList = [];
+      let seq = 1;
+      for (let i = 0; i < sessions.length; i++) {
+        const s = sessions[i];
+        const h = Math.max(1, Number(s.hours) || 1);
+        let mStr = "";
+        let dStr = "";
+
+        if (s.dateObj instanceof Date && !isNaN(s.dateObj.getTime())) {
+          mStr = String(s.dateObj.getMonth() + 1);
+          dStr = String(s.dateObj.getDate());
+        } else if (s.date) {
+          const nums = s.date.match(/\d+/g);
+          if (nums && nums.length >= 3) {
+            mStr = String(Number(nums[1]));
+            dStr = String(Number(nums[2]));
+          }
+        }
+
+        for (let k = 0; k < h; k++) {
+          sessionList.push({ num: seq++, month: mStr, day: dStr });
+        }
+      }
+
+      const totalCount = Math.max(sessionList.length, Number(totalHours) || 0, 1);
+      while (sessionList.length < totalCount) {
+        sessionList.push({ num: sessionList.length + 1, month: "", day: "" });
+      }
+
+      const studentCount = Math.max(20, Number(String(students).replace(/[^0-9]/g, "")) || 24);
+
+      updateProgressBar(85, "차시·날짜 기입", "running");
+
+      const line1Text = semesterText
+        ? `${year}학년도 ${semesterText} ${program}`
+        : `${year}학년도 ${program}`;
+      const line2Text = `${subject}반 출석부`;
+
+      let dateCellsHtml = "";
+      let numCellsHtml = "";
+      for (let c = 0; c < totalCount; c++) {
+        const item = sessionList[c];
+        const isShaded = Math.floor(c / 5) % 2 === 0;
+        const bg = isShaded ? "#d9d9d9" : "#ffffff";
+        const dateLabel = (item.month && item.day) ? `${item.month} /<br>&nbsp;&nbsp;${item.day}` : "/";
+        dateCellsHtml += `<th style="background:${bg}; font-size:9.5px; padding:2px 1px; line-height:1.15;">${dateLabel}</th>`;
+        numCellsHtml += `<th style="background:${bg}; font-size:10px; padding:2px 1px;">${item.num}</th>`;
+      }
+
+      let bodyRowsHtml = "";
+      for (let r = 0; r < studentCount; r++) {
+        let sessionEmptyCells = "";
+        for (let c = 0; c < totalCount; c++) {
+          const isShaded = Math.floor(c / 5) % 2 === 0;
+          const bg = isShaded ? "#d9d9d9" : "#ffffff";
+          sessionEmptyCells += `<td style="background:${bg}; padding:2px;"></td>`;
+        }
+        bodyRowsHtml += `
+          <tr style="height:21px; font-size:11px; text-align:center;">
+            <td>${r + 1}</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td style="color:#555;">／</td>
+            ${sessionEmptyCells}
+          </tr>
+        `;
+      }
+
+      document.getElementById("output-att").innerHTML = `
+        <div class="a4-page landscape">
+          <div style="text-align:right; font-size:13px; font-weight:bold; margin-bottom:6px;">
+            ${escapeHtml(schoolName)}
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:stretch; gap:8px; margin-bottom:12px;">
+            <div class="dashed-box" style="flex: 1.4; font-size:17px; line-height:1.45;">
+              ${escapeHtml(line1Text)}<br>
+              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${escapeHtml(line2Text)}
+            </div>
+            <div class="dashed-box" style="flex: 1; display:flex; align-items:flex-end; justify-content:flex-end; font-size:14px;">
+              담당교사 : &nbsp;&nbsp; ${escapeHtml(teacher)} &nbsp;&nbsp; (인)
+            </div>
+          </div>
+
+          <table class="sheet-table">
+            <thead>
+              <tr style="height:30px; font-size:11.5px;">
+                <th rowspan="2" style="width:34px; background:#fff;">No</th>
+                <th rowspan="2" style="width:70px; background:#fff;">학년반</th>
+                <th rowspan="2" style="width:66px; background:#fff;">학번</th>
+                <th rowspan="2" style="width:68px; background:#fff;">이름</th>
+                <th style="width:44px; background:#fff; border-bottom:1px solid #000;">날짜</th>
+                ${dateCellsHtml}
+              </tr>
+              <tr style="height:24px; font-size:11.5px; border-bottom:2px solid #000;">
+                <th style="background:#fff;">차시</th>
+                ${numCellsHtml}
+              </tr>
+            </thead>
+            <tbody>
+              ${bodyRowsHtml}
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      setButtonsDisabled(false);
+      updateProgressBar(100, "출석부 완료", "done");
+      showCompletionAndSwitch("att", "출석부");
+    }
+
+    // 초기 렌더링
+    renderSessionTable();
+  </script>
+</body>
+</html>
