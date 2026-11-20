@@ -25,6 +25,9 @@
       padding: 0;
       background: var(--bg);
       color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
     }
 
     /* 상단 네비게이션 바 */
@@ -82,9 +85,11 @@
     }
 
     .container {
+      flex: 1;
+      width: 100%;
       max-width: 1220px;
-      margin: 20px auto;
-      padding: 0 16px 60px;
+      margin: 20px auto 0;
+      padding: 0 16px 32px;
     }
 
     /* 패널 전환 */
@@ -480,10 +485,44 @@
       font-size: 14px;
     }
 
+    /* 하단 중앙 저작자 푸터 */
+    .app-footer {
+      text-align: center;
+      padding: 18px 16px 26px;
+      color: var(--subtext);
+      font-size: 12.5px;
+      border-top: 1px solid var(--border);
+      background: #ffffff;
+      margin-top: auto;
+      line-height: 1.6;
+    }
+
+    .app-footer .footer-badge {
+      display: inline-flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 6px 18px;
+    }
+
+    .app-footer .ver-tag {
+      font-family: Consolas, Monaco, monospace;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .app-footer .divider {
+      color: #dadce0;
+    }
+
     /* 인쇄 전용 스타일 */
     @media print {
-      body { background: #fff; }
-      .topbar, .doc-toolbar, .no-print { display: none !important; }
+      body { background: #fff; display: block; }
+      .topbar, .doc-toolbar, .no-print, .app-footer { display: none !important; }
       .container { max-width: none; margin: 0; padding: 0; }
       .a4-page {
         margin: 0;
@@ -503,7 +542,7 @@
   <!-- 상단 메뉴바 -->
   <header class="topbar">
     <div class="brand">
-      <span>📋 지도안 / 운영계획서 / 출석부 자동 생성기</span>
+      <span>📋 방과후학교 운영계획서/교수학습지도안/출석부 자동생성기_순천공업고등학교</span>
     </div>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="base" onclick="switchTab('base')">📝 기본작업</button>
@@ -532,10 +571,10 @@
               <tr><th>학년도</th><td><input type="text" id="inp-year" value="2026" placeholder="예: 2026" /></td></tr>
               <tr><th>학기</th><td><input type="text" id="inp-sem" value="2" placeholder="예: 2 (또는 2학기)" /></td></tr>
               <tr><th>프로그램명</th><td><input type="text" id="inp-program" value="방과후학교 특강" placeholder="예: 방과후학교 특강" /></td></tr>
-              <tr><th>과목(반)명</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this)" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
+              <tr><th>개설강좌</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this)" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
               <tr><th>담당교사</th><td><input type="text" id="inp-teacher" value="유성용" placeholder="예: 홍길동" /></td></tr>
               <tr><th>수강인원</th><td><input type="text" id="inp-students" value="20" placeholder="숫자만 입력 (예: 20)" /></td></tr>
-              <tr><th>강의실</th><td><input type="text" id="inp-room" value="정보실 1" placeholder="예: 정보실 1" /></td></tr>
+              <tr><th>강의실</th><td><input type="text" id="inp-room" value="후관동 2층 컴퓨터실" placeholder="예: 정보실 1" /></td></tr>
               <tr><th>시작일</th><td><input type="text" id="inp-startDate" value="2026. 09. 01" placeholder="예: 2026. 09. 01" /></td></tr>
               <tr><th>종료일</th><td><input type="text" id="inp-endDate" value="2026. 12. 22" placeholder="예: 2026. 12. 22" /></td></tr>
               <tr><th>시작시간</th><td><input type="text" id="inp-startTime" value="16:40" placeholder="예: 16:40" /></td></tr>
@@ -655,6 +694,17 @@
       </div>
     </section>
   </main>
+
+  <!-- 하단 중앙 저작자 및 버전 표시 -->
+  <footer class="app-footer no-print">
+    <div class="footer-badge">
+      <span>버전 <span class="ver-tag">autojodoan_v1_20261120_1123</span></span>
+      <span class="divider">|</span>
+      <span>만듦이 <b>useoaeT</b></span>
+      <span class="divider">|</span>
+      <span><b>순천공업고등학교</b></span>
+    </div>
+  </footer>
 
   <!-- 지도일시 달력 모달 팝업 (openCalendarPopup 재현) -->
   <div class="modal-backdrop" id="cal-backdrop" onclick="if(event.target===this) closeCalendarModal()">
