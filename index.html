@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>[딸깍이] 순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</title>
+  <title>[딸깍이] 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</title>
   <style>
     :root {
       --primary: #1a73e8;
@@ -409,9 +409,31 @@
       width: 34px; height: 34px; border: none; border-radius: 50%;
       background: transparent; cursor: pointer; font-size: 13px; font-weight: 500;
     }
-    .day-btn:hover { background: #e8f0fe; color: #1a73e8; font-weight: bold; }
+    .day-btn:hover:not(:disabled) { background: #e8f0fe; color: #1a73e8; font-weight: bold; }
+    .day-btn:disabled {
+      color: #c4c7c5 !important;
+      cursor: not-allowed;
+      text-decoration: line-through;
+      opacity: 0.55;
+    }
+    .day-btn.next-hint {
+      background: #e8f0fe;
+      color: #1a73e8;
+      font-weight: 700;
+      box-shadow: inset 0 0 0 1.5px #1a73e8;
+    }
     .sun { color: #d93025; }
     .sat { color: #1a73e8; }
+    .cal-hint-bar {
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #1a73e8;
+      background: #f1f6fe;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-align: center;
+      display: none;
+    }
     .cal-footer {
       margin-top: 10px; display: flex; justify-content: space-between; align-items: center;
       font-size: 11px; color: #5f6368;
@@ -629,7 +651,7 @@
   <header class="topbar">
     <div class="brand">
       <span class="brand-app-name">딸깍이</span>
-      <span>📋 순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</span>
+      <span>📋 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</span>
     </div>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="base" onclick="switchTab('base')">📝 기본작업</button>
@@ -813,6 +835,7 @@
         <div class="cal-title" id="monthTitle"></div>
         <button type="button" onclick="changeMonth(1)">▶</button>
       </div>
+      <div class="cal-hint-bar" id="cal-hint-bar"></div>
       <table class="cal-table">
         <thead>
           <tr><th>일</th><th>월</th><th>화</th><th>수</th><th>목</th><th>금</th><th>토</th></tr>
@@ -1136,21 +1159,62 @@
     }
 
     // =========================================================================
-    // 달력 모달 팝업 (openCalendarPopup 재현)
+    // 달력 모달 팝업 (위 행에서 선택한 날짜 다음 날짜부터 선택 가능하도록 기준일 배치)
     // =========================================================================
     let activeCalRowIdx = -1;
     let curYear = 2026;
     let curMonth = 9;
+    let minSelectableDateObj = null; // 위 행 선택 날짜의 다음 날(+1일)
+
+    function normalizeDateOnly(d) {
+      if (!(d instanceof Date) || isNaN(d.getTime())) return null;
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
 
     function openCalendarModal(rowIdx) {
       activeCalRowIdx = rowIdx;
       const d10Val = document.getElementById("inp-startDate").value;
       const startDateObj = parseSheetDate(d10Val) || new Date();
-      const cellDateObj = sessionRowsState[rowIdx]?.dateObj;
-      const baseDate = cellDateObj || startDateObj;
+
+      // 바로 위 행들 중 가장 마지막에 선택된 날짜 탐색
+      let prevSelectedDate = null;
+      for (let i = rowIdx - 1; i >= 0; i--) {
+        if (sessionRowsState[i]?.dateObj instanceof Date && !isNaN(sessionRowsState[i].dateObj.getTime())) {
+          prevSelectedDate = normalizeDateOnly(sessionRowsState[i].dateObj);
+          break;
+        }
+      }
+
+      // 위 행에서 선택된 날짜가 있으면 그 다음 날(+1일)부터 선택 가능하도록 최소 허용일 설정
+      if (prevSelectedDate) {
+        minSelectableDateObj = new Date(
+          prevSelectedDate.getFullYear(),
+          prevSelectedDate.getMonth(),
+          prevSelectedDate.getDate() + 1
+        );
+      } else {
+        minSelectableDateObj = null;
+      }
+
+      const cellDateObj = normalizeDateOnly(sessionRowsState[rowIdx]?.dateObj);
+      let baseDate = cellDateObj || minSelectableDateObj || startDateObj;
+
+      // 기존 셀 날짜가 최소 허용일보다 이전이라면 최소 허용일 기준으로 달력 위치 이동
+      if (minSelectableDateObj && baseDate < minSelectableDateObj) {
+        baseDate = minSelectableDateObj;
+      }
 
       curYear = baseDate.getFullYear();
       curMonth = baseDate.getMonth() + 1;
+
+      const hintBar = document.getElementById("cal-hint-bar");
+      if (minSelectableDateObj) {
+        hintBar.style.display = "block";
+        hintBar.innerText = `선택 가능 시작일: ${formatKoreanShortDate(minSelectableDateObj)} 이후`;
+      } else {
+        hintBar.style.display = "none";
+        hintBar.innerText = "";
+      }
 
       document.getElementById("cal-target-label").innerText = `${rowIdx + 1}번째 행`;
       renderCalendarGrid();
@@ -1177,12 +1241,22 @@
           if ((r === 0 && c < firstDay) || date > lastDate) {
             td.innerText = "";
           } else {
+            const cellDate = new Date(curYear, curMonth - 1, date);
+            const isBeforeMin = minSelectableDateObj && (cellDate < minSelectableDateObj);
+            const isExactNextDay = minSelectableDateObj && (cellDate.getTime() === minSelectableDateObj.getTime());
+
             const btn = document.createElement("button");
             btn.type = "button";
-            btn.className = "day-btn" + (c === 0 ? " sun" : (c === 6 ? " sat" : ""));
+            btn.className = "day-btn"
+              + (c === 0 ? " sun" : (c === 6 ? " sat" : ""))
+              + (isExactNextDay ? " next-hint" : "");
             btn.innerText = date;
-            const selectedDay = date;
-            btn.onclick = () => applySelectedDate(curYear, curMonth, selectedDay);
+            btn.disabled = Boolean(isBeforeMin);
+
+            if (!isBeforeMin) {
+              const selectedDay = date;
+              btn.onclick = () => applySelectedDate(curYear, curMonth, selectedDay);
+            }
             td.appendChild(btn);
             date++;
           }
@@ -1316,7 +1390,6 @@
       const csvContent = rows2D.map(row =>
         row.map(cell => {
           const val = String(cell === null || cell === undefined ? "" : cell);
-          // 쉼표, 큰따옴표, 줄바꿈이 포함된 경우 큰따옴표로 감싸고 내부 큰따옴표는 이스케이프
           if (/[",\r\n]/.test(val)) {
             return `"${val.replace(/"/g, '""')}"`;
           }
