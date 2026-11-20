@@ -727,7 +727,7 @@
         <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
         <div class="card">
           <h2 class="card-title">
-            <span>1. 기본 정보 입력</span>
+            <span>1. 기본 정보 입력 (D3:D14)</span>
             <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
           </h2>
 
@@ -766,7 +766,7 @@
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
         <div class="card">
           <h2 class="card-title">
-            <span>2. 차시별 시수 및 지도일시 입력</span>
+            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
             <div>
               <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
               <button class="mini-btn" onclick="resetSessions()">초기화</button>
@@ -775,7 +775,7 @@
 
           <div class="helper-bar">
             <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Plaese wait and try again</b></span>
-            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다. </span>
+            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>c출력물</b>의 형태를 제공하는 프로그램입니다. </span>
           </div>
 
           <table class="session-table" id="session-table">
@@ -1524,44 +1524,73 @@
     }
 
     // =========================================================================
-    // 공통 유틸: GAS 프록시를 통한 Flash 모델 동적 조회 (API 키 비노출)
+    // ★ JSONP 통신 헬퍼 (file:// 및 모든 브라우저에서 CORS 100% 우회)
+    // =========================================================================
+    function callGasJsonp(params) {
+      return new Promise((resolve, reject) => {
+        const callbackName = "gas_cb_" + Date.now() + "_" + Math.floor(Math.random() * 100000);
+        const script = document.createElement("script");
+
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error("GAS 응답 시간 초과 (45초)"));
+        }, 45000);
+
+        function cleanup() {
+          clearTimeout(timeoutId);
+          delete window[callbackName];
+          if (script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+        }
+
+        window[callbackName] = function(data) {
+          cleanup();
+          resolve(data);
+        };
+
+        const query = new URLSearchParams({ ...params, callback: callbackName }).toString();
+        script.src = `${GAS_PROXY_URL}?${query}`;
+        script.onerror = () => {
+          cleanup();
+          reject(new Error("GAS 스크립트 로드 실패 (배포 권한 '모든 사용자' 또는 웹앱 URL 확인)"));
+        };
+
+        document.body.appendChild(script);
+      });
+    }
+
+    // =========================================================================
+    // 공통 유틸: GAS 프록시(JSONP)를 통한 Flash 모델 동적 조회
     // =========================================================================
     async function getAvailableFlashModels() {
       let candidateModels = ["gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.0-flash"];
       try {
-        const listRes = await fetch(GAS_PROXY_URL, {
-          method: "POST",
-          redirect: "follow",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify({ action: "listModels" })
-        });
-        if (listRes.ok) {
-          const wrapped = await listRes.json();
-          if (wrapped.status === 200 && wrapped.body && wrapped.body.models) {
-            const filtered = wrapped.body.models
-              .filter(m =>
-                m.supportedGenerationMethods &&
-                m.supportedGenerationMethods.includes("generateContent") &&
-                m.name.includes("flash") &&
-                !m.name.includes("omni") &&
-                !m.name.includes("tts") &&
-                !m.name.includes("image") &&
-                !m.name.includes("audio") &&
-                !m.name.includes("thinking") &&
-                !m.name.includes("1.5") &&
-                !m.name.includes("2.0") &&
-                !m.name.includes("2.5")
-              )
-              .map(m => m.name.replace("models/", ""))
-              .sort((a, b) => {
-                if (a === "gemini-3.8-flash") return -1;
-                if (b === "gemini-3.8-flash") return 1;
-                return b.localeCompare(a);
-              });
+        const wrapped = await callGasJsonp({ action: "listModels" });
+        if (wrapped && wrapped.status === 200 && wrapped.body && wrapped.body.models) {
+          const filtered = wrapped.body.models
+            .filter(m =>
+              m.supportedGenerationMethods &&
+              m.supportedGenerationMethods.includes("generateContent") &&
+              m.name.includes("flash") &&
+              !m.name.includes("omni") &&
+              !m.name.includes("tts") &&
+              !m.name.includes("image") &&
+              !m.name.includes("audio") &&
+              !m.name.includes("thinking") &&
+              !m.name.includes("1.5") &&
+              !m.name.includes("2.0") &&
+              !m.name.includes("2.5")
+            )
+            .map(m => m.name.replace("models/", ""))
+            .sort((a, b) => {
+              if (a === "gemini-3.8-flash") return -1;
+              if (b === "gemini-3.8-flash") return 1;
+              return b.localeCompare(a);
+            });
 
-            if (filtered.length > 0) {
-              candidateModels = filtered;
-            }
+          if (filtered.length > 0) {
+            candidateModels = filtered;
           }
         }
       } catch (e) {}
@@ -1569,7 +1598,7 @@
     }
 
     // =========================================================================
-    // 공통 유틸: GAS 프록시 + 모델 폴백(재시도) 포함 Gemini JSON 호출기
+    // 공통 유틸: GAS 프록시(JSONP) + 모델 폴백(재시도) 포함 Gemini JSON 호출기
     // =========================================================================
     async function callGeminiWithFallback(candidateModels, prompt, schema) {
       const payload = {
@@ -1591,18 +1620,12 @@
         lastModel = modelName;
 
         try {
-          const response = await fetch(GAS_PROXY_URL, {
-            method: "POST",
-            redirect: "follow",
-            headers: { "Content-Type": "text/plain;charset=utf-8" },
-            body: JSON.stringify({
-              action: "generateContent",
-              modelName: modelName,
-              payload: payload
-            })
+          const wrapped = await callGasJsonp({
+            action: "generateContent",
+            modelName: modelName,
+            payload: JSON.stringify(payload)
           });
 
-          const wrapped = await response.json();
           const responseCode = wrapped.status;
           const responseText = typeof wrapped.body === "string" ? wrapped.body : JSON.stringify(wrapped.body);
 
@@ -1622,7 +1645,7 @@
           }
         } catch (err) {
           lastErrorCode = "예외";
-          lastErrorMsg = String(err);
+          lastErrorMsg = String(err.message || err);
         }
       }
 
@@ -1681,7 +1704,7 @@ ${sessionSummary}`;
       }
 
       return {
-        overallGoal: `API 오류 (${result.code}): ${result.message ? result.message.slice(0, 80) : ""}`,
+        overallGoal: `API 오류 (${result.code}): ${result.message ? result.message.slice(0, 100) : ""}`,
         planItems: sessions.map(() => ({
           topic: "생성 오류",
           content: "-",
@@ -1761,7 +1784,8 @@ ${sessionSummary}`;
     // =========================================================================
     async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems, candidateModels) {
       const allResults = [];
-      const batchSize = 4;
+      // JSONP(GET) URL 길이 한도 안전 확보를 위해 2개 블록 단위로 분할 호출
+      const batchSize = 2;
 
       for (let startIdx = 0; startIdx < sessions.length; startIdx += batchSize) {
         const endIdx = Math.min(startIdx + batchSize, sessions.length);
