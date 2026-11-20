@@ -2125,3 +2125,50 @@ ${blockDetails}`;
   </script>
 </body>
 </html>
+
+<!-- 상단 헤더 영역 예시 -->
+<header class="app-header">
+  <div class="header-title-wrap">
+    <span class="header-icon">📋</span>
+    <span class="brand-name">딸깍이</span>
+    <span class="header-divider">|</span>
+    <h1 class="sub-title">순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</h1>
+  </div>
+</header>
+
+<style>
+  .app-header {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 16px 28px;
+    display: flex;
+    align-items: center;
+  }
+  .header-title-wrap {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .header-icon {
+    font-size: 22px;
+  }
+  /* 요청하신 '딸깍이' 강조 스타일 */
+  .brand-name {
+    font-size: 26px;           /* 기존 제목보다 한 단계 큰 크기 */
+    font-weight: 800;          /* 아주 굵은 글씨 */
+    color: #2563eb;            /* 시인성이 좋고 깔끔한 포인트 블루 */
+    letter-spacing: -0.03em;
+  }
+  .header-divider {
+    color: #cbd5e1;
+    font-size: 20px;
+    font-weight: 300;
+  }
+  .sub-title {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+</style>
