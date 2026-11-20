@@ -727,7 +727,7 @@
         <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
         <div class="card">
           <h2 class="card-title">
-            <span>1. 기본 정보 입력</span>
+            <span>1. 기본 정보 입력 (D3:D14)</span>
             <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
           </h2>
 
@@ -766,7 +766,7 @@
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
         <div class="card">
           <h2 class="card-title">
-            <span>2. 차시별 시수 및 지도일시 입력</span>
+            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
             <div>
               <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
               <button class="mini-btn" onclick="resetSessions()">초기화</button>
@@ -775,7 +775,7 @@
 
           <div class="helper-bar">
             <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Plaese wait and try again</b></span>
-            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다. </span>
+            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다.</span>
           </div>
 
           <table class="session-table" id="session-table">
@@ -916,7 +916,7 @@
 
   <script>
     // ★ Google Apps Script 프록시 웹앱 URL (API 키는 서버 측 GAS 내부에만 보관됨)
-    const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbxIi2kvhxmzD3M1XUDQEPsqSn7R1OerPFn8lr6MuxnPZSKYVPW3xQxjwvJI5RXCITICCA/exec";
+    const GAS_PROXY_URL = "[https://script.google.com/macros/s/AKfycbxIi2kvhxmzD3M1XUDQEPsqSn7R1OerPFn8lr6MuxnPZSKYVPW3xQxjwvJI5RXCITICCA/exec](https://script.google.com/macros/s/AKfycbxIi2kvhxmzD3M1XUDQEPsqSn7R1OerPFn8lr6MuxnPZSKYVPW3xQxjwvJI5RXCITICCA/exec)";
 
     // =========================================================================
     // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안)
@@ -1631,7 +1631,9 @@
 
           if (responseCode === 200) {
             const json = JSON.parse(responseText);
-            const rawText = json.candidates[0].content.parts[0].text;
+            let rawText = (json.candidates && json.candidates[0] && json.candidates[0].content && json.candidates[0].content.parts[0].text) || "";
+            // 마크다운 코드블록(```json ... ```)이 포함된 경우 제거
+            rawText = rawText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
             return JSON.parse(rawText);
           } else {
             lastErrorCode = responseCode;
@@ -1780,66 +1782,41 @@ ${sessionSummary}`;
     }
 
     // =========================================================================
-    // [2단계 Gemini 호출] 표지 및 지도일지의 차시별 지도내용을 토대로 세부 지도안(1,100자 내외, 최소 1,000자) 구성
+    // [2단계 Gemini 호출] 세부 지도안 1장 단위 생성 + 매 장마다 실시간 프로그래스바 반영
     // =========================================================================
     async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems, candidateModels) {
       const allResults = [];
-      // JSONP(GET) URL 길이 한도 안전 확보를 위해 2개 블록 단위로 분할 호출
-      const batchSize = 2;
+      const totalCount = sessions.length;
 
-      for (let startIdx = 0; startIdx < sessions.length; startIdx += batchSize) {
-        const endIdx = Math.min(startIdx + batchSize, sessions.length);
-        const pct = 25 + Math.round((startIdx / sessions.length) * 60);
-        updateProgressBar(pct, `${startIdx + 1}~${endIdx}/${sessions.length}장 작성`, "running");
+      for (let i = 0; i < totalCount; i++) {
+        // 1장 생성 시작 시 프로그래스바 갱신 (25% ~ 90% 구간 분할)
+        const startPct = 25 + Math.round((i / totalCount) * 65);
+        updateProgressBar(startPct, `지도안 ${i + 1}/${totalCount}장 작성 중`, "running");
 
-        const chunkSessions = sessions.slice(startIdx, endIdx);
-        const blockDetails = chunkSessions.map((s, idx) => {
-          const globalIdx = startIdx + idx;
-          const item = aiPlanList[globalIdx] || { topic: "", objective: "", notes: "" };
-          const opContent = (Array.isArray(opPlanItems) && opPlanItems[globalIdx] && opPlanItems[globalIdx].content)
-            ? ` | 운영계획 세부내용: ${opPlanItems[globalIdx].content.replace(/\n/g, " ")}`
-            : "";
-          return `[${idx + 1}번 지도안] 차시: ${s.start}~${s.end}차시(${s.hours}시수) | 학습주제: ${item.topic.replace(/\n/g, " ")} | 학습목표: ${item.objective.replace(/\n/g, " ")} | 유의점·자료: ${item.notes}${opContent}`;
-        }).join("\n");
+        const s = sessions[i];
+        const item = aiPlanList[i] || { topic: "", objective: "", notes: "" };
+        const opContent = (Array.isArray(opPlanItems) && opPlanItems[i] && opPlanItems[i].content)
+          ? ` | 세부내용: ${opPlanItems[i].content.replace(/\n/g, " ")}`
+          : "";
 
-        const prompt = `당신은 대한민국 고등학교 교사입니다. '${subject}'(${semesterText} ${program})의 [표지 및 차시별 지도일지]에 확정된 각 차시별 **학습주제, 학습목표, 유의점·자료**를 토대로, 실제 수업에서 바로 활용할 수 있는 세부 교수-학습지도안의 '실제 학습 내용'과 '학습 활동 안내'를 작성해주세요.
+        const prompt = `고등학교 교사로서 '${subject}'(${semesterText} ${program})의 세부 교수-학습지도안 '학습(활동) 내용'을 작성하세요.
+[대상 차시] ${s.start}~${s.end}차시(${s.hours}시수) | 주제: ${item.topic.replace(/\n/g, " ")} | 목표: ${item.objective.replace(/\n/g, " ")} | 자료: ${item.notes}${opContent}
 
-[작성 규칙 - 매우 중요]
-1. 각 지도안은 반드시 위에 제시된 해당 차시의 **학습주제와 학습목표**를 충실히 달성할 수 있도록 내용을 직접 연계하여 구성하세요.
-2. **'도입', '전개', '정리'라는 단계 구분 제목을 절대 사용하지 마세요.** 하나의 통합된 개괄식 구조 안에 '실제 학습할 핵심 교과 내용'과 '수업 활동 안내'를 자연스럽게 이어서 구성하세요.
-3. **절대 줄글(서술형 문단)로 쓰지 마세요.** 반드시 항목별 기호(■, 1., -, •)와 명사형/간결한 개조식 종결("~확인", "~이해", "~설명", "~실습하기", "~해결하기")을 사용한 **개괄식(개조식)**으로만 작성하세요.
-4. **글자 수 엄수 (A4 1페이지 맞춤):** 각 지도안당 전체 글자 수는 **공백 포함 1,100자 내외(최소 1,000자 ~ 최대 1,150자 범위)**로 정확히 맞추어 작성하세요. 1,000자 미만으로 너무 짧거나 1,200자를 초과하여 A4 1페이지를 넘기지 않도록 핵심 교과 개념·공식·원리·기능 및 학생 활동 절차를 알차고 균형 있게 구성하세요.
-5. 반드시 아래 2가지 대항목 구조를 갖추어 줄바꿈(\\n)으로 깔끔하게 구분하세요.
-
-[필수 출력 구조 예시]
+[작성 규칙]
+1. '도입', '전개', '정리' 제목을 쓰지 말고, 줄글 대신 기호(■, 1., -, •)와 개조식("~이해", "~설명", "~실습하기")으로만 작성.
+2. 공백 포함 1,050~1,150자 분량으로 작성.
+3. 아래 2개 대항목 구조로 줄바꿈(\\n) 구분:
 ■ 핵심 학습 내용
-1. (주요 개념/원리/기능명 1)
-  - (실제 수업에서 가르칠 핵심 정의, 공식, 성질, 명령어·함수 구조 등 구체적 내용)
-  - (세부 하위 개념 및 대표 예제 적용 원리)
-2. (주요 개념/원리/기능명 2)
-  - (심화 개념, 조건별 분기, 오류 방지 및 주의 사항)
-  - (실전 문제 및 실습 과제 적용 기준)
-3. (주요 개념/원리/기능명 3)
-  - (단원 핵심 연계 개념 및 응용 확장 포인트)
-
+1. (핵심 개념/원리 1) - 정의, 공식·구조, 대표 예제 적용 원리
+2. (핵심 개념/원리 2) - 심화 개념, 주의 사항, 실습 과제 기준
+3. (핵심 개념/원리 3) - 단원 연계 및 응용 포인트
 ■ 학습 활동 및 지도 안내
 1. 전시 학습 점검 및 학습 목표 안내
-  - (이전 차시 핵심 개념 확인 질문 및 본시 학습 주제의 필요성·실생활 연계 사례 제시)
-  - (본시 성취기준 및 세부 학습 활동 순서 안내)
 2. 핵심 원리 탐구 및 시범 실습
-  - (핵심 개념·원리 판서/PPT 설명 및 기본 예제 단계별 풀이 시범)
-  - (학생 개별 개념 확인 및 핵심 원리 노트 구조화 정리)
 3. 수준별 문제 해결 및 심화 탐구 활동
-  - (기본·심화 학습지 또는 실습 과제를 통한 단계별 문제 해결 활동 진행)
-  - (모둠별 토의·상호 피드백 및 교사 순회 지도를 통한 개별 오개념 교정)
 4. 학습 내용 정리 및 형성평가
-  - (본시 핵심 개념·공식·절차 요약 정리 및 형성평가 문항 해결)
-  - (학습 결과 성찰, 과제 안내 및 다음 차시 학습 내용 예고)
 
-6. 반드시 위 형식을 따른 JSON 문자열 배열로만 응답하세요. 배열 길이는 정확히 ${chunkSessions.length}개여야 합니다.
-
-[차시별 지도일지 확정 목록]
-${blockDetails}`;
+반드시 1개 문자열을 담은 JSON 배열(["내용"])로만 응답하세요.`;
 
         const schema = {
           type: "ARRAY",
@@ -1848,13 +1825,14 @@ ${blockDetails}`;
 
         const result = await callGeminiWithFallback(candidateModels, prompt, schema);
         if (Array.isArray(result)) {
-          for (let k = 0; k < chunkSessions.length; k++) {
-            allResults.push(result[k] || "");
-          }
+          allResults.push(result[0] || "");
+          // 1장 완료 즉시 체크하여 프로그래스바 진행률 갱신
+          const donePct = 25 + Math.round(((i + 1) / totalCount) * 65);
+          updateProgressBar(donePct, `지도안 ${i + 1}/${totalCount}장 완료 ✓`, "running");
         } else {
-          for (let k = 0; k < chunkSessions.length; k++) {
-            allResults.push(`세부 지도안 생성 오류 (${result.code}): ${result.message}`);
-          }
+          allResults.push(`세부 지도안 생성 오류 (${result.code}): ${result.message}`);
+          const errPct = 25 + Math.round(((i + 1) / totalCount) * 65);
+          updateProgressBar(errPct, `지도안 ${i + 1}/${totalCount}장 오류`, "error");
         }
       }
 
@@ -2176,7 +2154,7 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 2] '교수학습지도안(세부)' 생성 (A4 세로 1장씩 고정 + 1,100자 내외)
+    // [버튼 2] '교수학습지도안(세부)' 생성 (A4 세로 1장씩 고정 + 장별 실시간 프로그래스바)
     // =========================================================================
     async function generateDetailedPlans() {
       const data = readBaseTaskData();
@@ -2219,7 +2197,7 @@ ${blockDetails}`;
 
       sharedPlanData.detailedActivities = detailedActivities;
 
-      updateProgressBar(90, "시트 서식 구성 (A4 1장 맞춤)", "running");
+      updateProgressBar(95, "시트 서식 구성 (A4 1장 맞춤)", "running");
 
       editModeState.detail = false;
       const btn = document.getElementById("edit-btn-detail");
@@ -2301,7 +2279,7 @@ ${blockDetails}`;
       container.innerHTML = pagesHtml;
 
       setButtonsDisabled(false);
-      updateProgressBar(100, `지도안 ${sessions.length}장 완료`, "done");
+      updateProgressBar(100, `지도안 ${sessions.length}장 모두 완료`, "done");
       showCompletionAndSwitch("detail", "교수학습지도안");
     }
 
