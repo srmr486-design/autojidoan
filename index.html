@@ -445,7 +445,7 @@
     .clear-btn:hover { background: #fce8e6; }
 
     /* =========================================================================
-       생성 결과 문서 출력 뷰 (A4 시트 레이아웃 재현)
+       생성 결과 문서 출력 뷰 & 미리보기 직접 수정 모드
        ========================================================================= */
     .doc-toolbar {
       display: flex;
@@ -467,8 +467,8 @@
       flex-wrap: wrap;
     }
 
-    .csv-btn {
-      background: #137333;
+    .edit-toggle-btn {
+      background: #1a73e8;
       color: #fff;
       border: none;
       padding: 8px 14px;
@@ -479,8 +479,44 @@
       display: inline-flex;
       align-items: center;
       gap: 5px;
+      transition: background 0.15s;
     }
-    .csv-btn:hover { background: #0d5626; }
+    .edit-toggle-btn:hover { background: #1557b0; }
+    .edit-toggle-btn.editing {
+      background: #137333;
+    }
+    .edit-toggle-btn.editing:hover {
+      background: #0d5626;
+    }
+
+    .edit-guide-banner {
+      display: none;
+      background: #e8f0fe;
+      border: 1px solid #8ab4f8;
+      color: #174ea6;
+      padding: 9px 14px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      text-align: center;
+    }
+    .edit-guide-banner.active {
+      display: block;
+    }
+
+    /* 직접 수정 활성화 시 편집 가능 셀 시각 표시 */
+    .is-editing [contenteditable="true"] {
+      outline: 1.5px dashed #1a73e8 !important;
+      outline-offset: -2px;
+      background-color: rgba(232, 240, 254, 0.45) !important;
+      cursor: text;
+    }
+    .is-editing [contenteditable="true"]:focus {
+      outline: 2px solid #1a73e8 !important;
+      background-color: #ffffff !important;
+      box-shadow: inset 0 0 0 1px #1a73e8;
+    }
 
     .print-btn {
       background: #202124;
@@ -612,7 +648,7 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      .topbar, .doc-toolbar, .no-print, .app-footer {
+      .topbar, .doc-toolbar, .edit-guide-banner, .no-print, .app-footer {
         display: none !important;
       }
       .container {
@@ -637,6 +673,10 @@
       .a4-page:last-child {
         page-break-after: auto;
         break-after: auto;
+      }
+      [contenteditable="true"] {
+        outline: none !important;
+        box-shadow: none !important;
       }
     }
   </style>
@@ -752,15 +792,18 @@
     </section>
 
     <!-- ===================================================================
-         [탭 1] 운영계획서 출력 화면 (A4 세로 디폴트 + CSV 다운로드)
+         [탭 1] 운영계획서 출력 화면 (A4 세로 디폴트 + 미리보기 직접 수정)
          =================================================================== -->
     <section id="panel-op" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>운영계획서</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
         <div class="toolbar-actions">
-          <button class="csv-btn" onclick="downloadOperationPlanCSV()">📥 CSV 다운로드 (수기수정용)</button>
-          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+          <button class="edit-toggle-btn" id="edit-btn-op" onclick="toggleEditMode('op')">✏️ 내용 직접 수정</button>
+          <button class="print-btn" onclick="printDocument('portrait', 'op')">🖨️ A4 세로 인쇄 / PDF 저장</button>
         </div>
+      </div>
+      <div class="edit-guide-banner no-print" id="edit-guide-op">
+        ✏️ 직접 수정 모드 활성화: 파란 점선 표시된 칸을 클릭해 내용을 수정한 뒤 <b>[✅ 수정 완료]</b>를 누르면 표지·지도일지 생성 시에도 수정된 주제가 반영됩니다.
       </div>
       <div id="output-op">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[0️⃣ 운영계획서 생성]</b> 버튼을 눌러주세요.</div>
@@ -768,15 +811,18 @@
     </section>
 
     <!-- ===================================================================
-         [탭 2] 표지 및 차시별 지도일지 출력 화면 (A4 세로 디폴트 + CSV 다운로드)
+         [탭 2] 표지 및 차시별 지도일지 출력 화면 (A4 세로 디폴트 + 미리보기 직접 수정)
          =================================================================== -->
     <section id="panel-cover" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>표지 및 차시별 지도일지</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
         <div class="toolbar-actions">
-          <button class="csv-btn" onclick="downloadCoverAndSummaryCSV()">📥 CSV 다운로드 (수기수정용)</button>
-          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+          <button class="edit-toggle-btn" id="edit-btn-cover" onclick="toggleEditMode('cover')">✏️ 내용 직접 수정</button>
+          <button class="print-btn" onclick="printDocument('portrait', 'cover')">🖨️ A4 세로 인쇄 / PDF 저장</button>
         </div>
+      </div>
+      <div class="edit-guide-banner no-print" id="edit-guide-cover">
+        ✏️ 직접 수정 모드 활성화: 파란 점선 표시된 칸을 클릭해 내용을 수정한 뒤 <b>[✅ 수정 완료]</b>를 누르면 세부 교수학습지도안 생성 시에도 수정된 주제·목표가 반영됩니다.
       </div>
       <div id="output-cover">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[1️⃣ 표지 및 차시별 지도일지 생성]</b> 버튼을 눌러주세요.</div>
@@ -784,15 +830,18 @@
     </section>
 
     <!-- ===================================================================
-         [탭 3] 교수-학습지도안(세부) 출력 화면 (A4 세로 1페이지 고정 + CSV 다운로드)
+         [탭 3] 교수-학습지도안(세부) 출력 화면 (A4 세로 1페이지 고정 + 미리보기 직접 수정)
          =================================================================== -->
     <section id="panel-detail" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>교수-학습지도안(세부)</b> 미리보기 (기본 인쇄 규격: <b>A4 세로 · 1장씩 고정</b> / 머리글·바닥글 자동 제거)</span>
         <div class="toolbar-actions">
-          <button class="csv-btn" onclick="downloadDetailedPlansCSV()">📥 CSV 다운로드 (수기수정용)</button>
-          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+          <button class="edit-toggle-btn" id="edit-btn-detail" onclick="toggleEditMode('detail')">✏️ 내용 직접 수정</button>
+          <button class="print-btn" onclick="printDocument('portrait', 'detail')">🖨️ A4 세로 인쇄 / PDF 저장</button>
         </div>
+      </div>
+      <div class="edit-guide-banner no-print" id="edit-guide-detail">
+        ✏️ 직접 수정 모드 활성화: 파란 점선 표시된 주제·학습목표·학습(활동) 내용을 클릭해 자유롭게 수정한 뒤 <b>[✅ 수정 완료]</b>를 눌러주세요.
       </div>
       <div id="output-detail">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[2️⃣ 교수-학습지도안(세부) 생성]</b> 버튼을 눌러주세요.</div>
@@ -800,15 +849,18 @@
     </section>
 
     <!-- ===================================================================
-         [탭 4] 출석부 출력 화면 (A4 가로 디폴트 & 1페이지 동적 맞춤 + CSV 다운로드)
+         [탭 4] 출석부 출력 화면 (A4 가로 디폴트 & 1페이지 동적 맞춤 + 미리보기 직접 수정)
          =================================================================== -->
     <section id="panel-att" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>출석부</b> 미리보기 (기본 인쇄 규격: <b>A4 가로 · 1페이지 자동 맞춤</b> / 머리글·바닥글 자동 제거)</span>
         <div class="toolbar-actions">
-          <button class="csv-btn" onclick="downloadAttendanceCSV()">📥 CSV 다운로드 (수기수정용)</button>
-          <button class="print-btn" onclick="printDocument('landscape')">🖨️ A4 가로 인쇄 / PDF 저장</button>
+          <button class="edit-toggle-btn" id="edit-btn-att" onclick="toggleEditMode('att')">✏️ 내용 직접 수정</button>
+          <button class="print-btn" onclick="printDocument('landscape', 'att')">🖨️ A4 가로 인쇄 / PDF 저장</button>
         </div>
+      </div>
+      <div class="edit-guide-banner no-print" id="edit-guide-att">
+        ✏️ 직접 수정 모드 활성화: 학년반·학번·이름 및 차시별 출결 칸을 클릭해 직접 입력·수정한 뒤 <b>[✅ 수정 완료]</b>를 눌러주세요.
       </div>
       <div id="output-att">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[3️⃣ 출석부 생성]</b> 버튼을 눌러주세요.</div>
@@ -862,15 +914,13 @@
     }
 
     // =========================================================================
-    // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안 -> CSV 내보내기)
+    // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안)
     // =========================================================================
     let sharedPlanData = {
-      fingerprint: "",        // 기본정보(과목/학기/프로그램) + 차시 시수 조합 지문
-      lastBaseData: null,      // 마지막 생성 시점의 기본작업 데이터 스냅샷
+      fingerprint: "",         // 기본정보(과목/학기/프로그램) + 차시 시수 조합 지문
       opPlanData: null,        // [0단계] 운영계획서 데이터 ({ overallGoal, planItems: [{topic, content, materials, remarks}] })
       lessonPlanList: null,    // [1단계] 표지 및 지도일지 데이터 ([{ topic, objective, notes }])
-      detailedActivities: null,// [2단계] 교수학습지도안 세부 활동 배열 ([String])
-      attendanceSnapshot: null // [3단계] 출석부 스냅샷 ({ data, sessionList, totalCount, studentCount })
+      detailedActivities: null // [2단계] 교수학습지도안 세부 활동 배열 ([String])
     };
 
     function buildPlanFingerprint(data) {
@@ -885,6 +935,97 @@
       sharedPlanData.detailedActivities = null;
     }
 
+    // =========================================================================
+    // ★ 미리보기 내용 직접 수정 모드 제어 및 수정 데이터 동기화
+    // =========================================================================
+    const editModeState = {
+      op: false,
+      cover: false,
+      detail: false,
+      att: false
+    };
+
+    function extractEditableText(el) {
+      // innerText는 <br> 및 블록 줄바꿈을 자연스럽게 \n으로 반환함
+      return (el.innerText || "").replace(/\r\n/g, "\n").trim();
+    }
+
+    function syncEditedContentToState(tabKey) {
+      const container = document.getElementById(`output-${tabKey}`);
+      if (!container) return;
+
+      if (tabKey === "op" && sharedPlanData.opPlanData) {
+        const goalEl = container.querySelector('[data-edit-field="overallGoal"]');
+        if (goalEl) {
+          sharedPlanData.opPlanData.overallGoal = extractEditableText(goalEl);
+        }
+        container.querySelectorAll('[data-edit-op-idx]').forEach(el => {
+          const idx = Number(el.dataset.editOpIdx);
+          const field = el.dataset.editField;
+          if (sharedPlanData.opPlanData.planItems && sharedPlanData.opPlanData.planItems[idx] && field) {
+            sharedPlanData.opPlanData.planItems[idx][field] = extractEditableText(el);
+          }
+        });
+      } else if (tabKey === "cover" && sharedPlanData.lessonPlanList) {
+        container.querySelectorAll('[data-edit-cover-idx]').forEach(el => {
+          const idx = Number(el.dataset.editCoverIdx);
+          const field = el.dataset.editField;
+          if (sharedPlanData.lessonPlanList[idx] && field) {
+            sharedPlanData.lessonPlanList[idx][field] = extractEditableText(el);
+          }
+        });
+      } else if (tabKey === "detail") {
+        container.querySelectorAll('[data-edit-detail-idx]').forEach(el => {
+          const idx = Number(el.dataset.editDetailIdx);
+          const field = el.dataset.editField;
+          if (field === "activity" && Array.isArray(sharedPlanData.detailedActivities)) {
+            sharedPlanData.detailedActivities[idx] = extractEditableText(el);
+          } else if (sharedPlanData.lessonPlanList && sharedPlanData.lessonPlanList[idx] && field) {
+            sharedPlanData.lessonPlanList[idx][field] = extractEditableText(el);
+          }
+        });
+      }
+    }
+
+    function setEditMode(tabKey, enable) {
+      const container = document.getElementById(`output-${tabKey}`);
+      const btn = document.getElementById(`edit-btn-${tabKey}`);
+      const guide = document.getElementById(`edit-guide-${tabKey}`);
+      if (!container || !btn) return;
+
+      const editables = container.querySelectorAll(".editable-cell");
+      if (enable && editables.length === 0) {
+        alert("먼저 문서를 생성한 뒤에 내용을 수정할 수 있습니다.");
+        return;
+      }
+
+      if (!enable && editModeState[tabKey]) {
+        // 수정 완료 시 변경된 내용을 내부 공유 데이터에 동기화
+        syncEditedContentToState(tabKey);
+      }
+
+      editModeState[tabKey] = enable;
+      container.classList.toggle("is-editing", enable);
+
+      editables.forEach(el => {
+        el.setAttribute("contenteditable", enable ? "true" : "false");
+      });
+
+      if (enable) {
+        btn.classList.add("editing");
+        btn.innerHTML = "✅ 수정 완료";
+        if (guide) guide.classList.add("active");
+      } else {
+        btn.classList.remove("editing");
+        btn.innerHTML = "✏️ 내용 직접 수정";
+        if (guide) guide.classList.remove("active");
+      }
+    }
+
+    function toggleEditMode(tabKey) {
+      setEditMode(tabKey, !editModeState[tabKey]);
+    }
+
     // 용지 방향 설정 (운영계획서/표지/지도안 = portrait, 출석부 = landscape)
     function setPageOrientation(orientation) {
       const styleTag = document.getElementById("dynamic-page-orientation");
@@ -893,7 +1034,11 @@
       }
     }
 
-    function printDocument(orientation) {
+    function printDocument(orientation, tabKey) {
+      // 인쇄 전에 편집 모드가 켜져 있다면 자동 저장 후 편집 테두리 해제
+      if (tabKey && editModeState[tabKey]) {
+        setEditMode(tabKey, false);
+      }
       setPageOrientation(orientation);
       window.print();
     }
@@ -1164,7 +1309,7 @@
     let activeCalRowIdx = -1;
     let curYear = 2026;
     let curMonth = 9;
-    let minSelectableDateObj = null; // 위 행 선택 날짜의 다음 날(+1일)
+    let minSelectableDateObj = null;
 
     function normalizeDateOnly(d) {
       if (!(d instanceof Date) || isNaN(d.getTime())) return null;
@@ -1176,7 +1321,6 @@
       const d10Val = document.getElementById("inp-startDate").value;
       const startDateObj = parseSheetDate(d10Val) || new Date();
 
-      // 바로 위 행들 중 가장 마지막에 선택된 날짜 탐색
       let prevSelectedDate = null;
       for (let i = rowIdx - 1; i >= 0; i--) {
         if (sessionRowsState[i]?.dateObj instanceof Date && !isNaN(sessionRowsState[i].dateObj.getTime())) {
@@ -1185,7 +1329,6 @@
         }
       }
 
-      // 위 행에서 선택된 날짜가 있으면 그 다음 날(+1일)부터 선택 가능하도록 최소 허용일 설정
       if (prevSelectedDate) {
         minSelectableDateObj = new Date(
           prevSelectedDate.getFullYear(),
@@ -1199,7 +1342,6 @@
       const cellDateObj = normalizeDateOnly(sessionRowsState[rowIdx]?.dateObj);
       let baseDate = cellDateObj || minSelectableDateObj || startDateObj;
 
-      // 기존 셀 날짜가 최소 허용일보다 이전이라면 최소 허용일 기준으로 달력 위치 이동
       if (minSelectableDateObj && baseDate < minSelectableDateObj) {
         baseDate = minSelectableDateObj;
       }
@@ -1377,211 +1519,6 @@
       return spaceBeforeParen
         ? `${sDate} ~ ${eDate} (${hours}차시)`
         : `${sDate} ~ ${eDate}( ${hours}차시)`;
-    }
-
-    // =========================================================================
-    // ★ CSV 파일 생성 및 다운로드 공통 유틸리티 (UTF-8 BOM 적용 -> 엑셀 한글 깨짐 방지)
-    // =========================================================================
-    function sanitizeFileName(name) {
-      return String(name || "문서").replace(/[\\/:*?"<>|]/g, "_").trim();
-    }
-
-    function triggerCsvDownload(filename, rows2D) {
-      const csvContent = rows2D.map(row =>
-        row.map(cell => {
-          const val = String(cell === null || cell === undefined ? "" : cell);
-          if (/[",\r\n]/.test(val)) {
-            return `"${val.replace(/"/g, '""')}"`;
-          }
-          return val;
-        }).join(",")
-      ).join("\r\n");
-
-      const bom = "\uFEFF";
-      const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    }
-
-    // [CSV 0] 운영계획서 CSV 다운로드
-    function downloadOperationPlanCSV() {
-      if (!sharedPlanData.opPlanData) {
-        alert("먼저 [0️⃣ 운영계획서 생성] 버튼을 눌러 운영계획서를 생성해주세요.");
-        return;
-      }
-      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
-      const op = sharedPlanData.opPlanData;
-      const headerLine = data.semesterText
-        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
-        : `${data.year}학년도 ${data.program}`;
-      const periodText = formatPeriodText(data.startDate, data.endDate, data.totalHours, true);
-
-      const rows = [
-        [headerLine],
-        [`${data.subject} 반 운영 계획서`],
-        [],
-        ["담당 교사", `${data.teacher} (인)`],
-        ["수강 인원", `${data.students}명`],
-        ["강의실", data.room],
-        ["지도 기간", periodText],
-        ["지도 목표", op.overallGoal || ""],
-        [],
-        ["[차시별 지도 계획]"],
-        ["시작차시", "종료차시", "시수", "학습 주제", "학습 내용", "준비물", "비고"]
-      ];
-
-      data.sessions.forEach((s, idx) => {
-        const item = (op.planItems && op.planItems[idx]) || { topic: "", content: "", materials: "", remarks: "" };
-        rows.push([
-          s.start,
-          s.end,
-          s.hours,
-          item.topic || "",
-          item.content || "",
-          item.materials || "",
-          item.remarks || ""
-        ]);
-      });
-
-      rows.push(["총", "", data.totalHours, "시수", "", "", ""]);
-      rows.push([]);
-      rows.push(["학교명", data.schoolName]);
-
-      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_운영계획서.csv`;
-      triggerCsvDownload(fileName, rows);
-    }
-
-    // [CSV 1] 표지 및 차시별 지도일지 CSV 다운로드
-    function downloadCoverAndSummaryCSV() {
-      if (!sharedPlanData.lessonPlanList) {
-        alert("먼저 [1️⃣ 표지 및 차시별 지도일지 생성] 버튼을 눌러 지도일지를 생성해주세요.");
-        return;
-      }
-      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
-      const list = sharedPlanData.lessonPlanList;
-      const headerLine = data.semesterText
-        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
-        : `${data.year}학년도 ${data.program}`;
-      const periodText = formatPeriodText(data.startDate, data.endDate, data.totalHours, false);
-      const timeText = (data.startTime && data.endTime) ? `${data.startTime} ~ ${data.endTime}` : (data.startTime || data.endTime || "");
-
-      const rows = [
-        [headerLine],
-        [`${data.subject} 반 교수-학습 지도안 (표지 및 차시별 지도일지)`],
-        [],
-        ["담당 교사", `${data.teacher} (인)`],
-        ["수강 인원", `${data.students}명`],
-        ["강의실", data.room],
-        ["지도 기간", periodText],
-        ["지도 시간", timeText],
-        ["학교명", data.schoolName],
-        [],
-        ["[차시별 지도 내용]"],
-        ["시작차시", "종료차시", "시수", "지도일시", "학습 주제", "학습 목표", "유의점 및 자료"]
-      ];
-
-      data.sessions.forEach((s, idx) => {
-        const item = list[idx] || { topic: "", objective: "", notes: "" };
-        rows.push([
-          s.start,
-          s.end,
-          s.hours,
-          s.date,
-          item.topic || "",
-          item.objective || "",
-          item.notes || ""
-        ]);
-      });
-
-      rows.push(["총", "", data.totalHours, "시수", "", "", ""]);
-
-      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_표지및지도일지.csv`;
-      triggerCsvDownload(fileName, rows);
-    }
-
-    // [CSV 2] 교수-학습지도안(세부) CSV 다운로드
-    function downloadDetailedPlansCSV() {
-      if (!sharedPlanData.detailedActivities || !sharedPlanData.lessonPlanList) {
-        alert("먼저 [2️⃣ 교수-학습지도안(세부) 생성] 버튼을 눌러 세부 지도안을 생성해주세요.");
-        return;
-      }
-      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
-      const list = sharedPlanData.lessonPlanList;
-      const acts = sharedPlanData.detailedActivities;
-      const prefixPart = data.semesterText ? `${data.semesterText} ${data.program} (` : `${data.program} (`;
-
-      const rows = [
-        [`${prefixPart}${data.subject})반 교수-학습지도안 (세부)`],
-        [],
-        ["순번", "지도일시", "지도시간", "차시(누적)", "주제", "학습 목표", "지도상 유의점 및 자료", "학습(활동) 내용"]
-      ];
-
-      let cumulativeHours = 0;
-      data.sessions.forEach((s, idx) => {
-        const item = list[idx] || { topic: "", objective: "", notes: "" };
-        const actText = acts[idx] || "";
-        cumulativeHours += Number(s.hours) || 0;
-
-        rows.push([
-          idx + 1,
-          s.date.replace(/\n/g, ", "),
-          data.timeRangeText,
-          `${s.start} - ${s.end} / ${cumulativeHours}`,
-          item.topic.replace(/\n/g, " "),
-          item.objective || "",
-          item.notes || "",
-          actText
-        ]);
-      });
-
-      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_교수학습지도안_세부.csv`;
-      triggerCsvDownload(fileName, rows);
-    }
-
-    // [CSV 3] 출석부 CSV 다운로드
-    function downloadAttendanceCSV() {
-      if (!sharedPlanData.attendanceSnapshot) {
-        alert("먼저 [3️⃣ 출석부 생성] 버튼을 눌러 출석부를 생성해주세요.");
-        return;
-      }
-      const { data, sessionList, totalCount, studentCount } = sharedPlanData.attendanceSnapshot;
-      const line1Text = data.semesterText
-        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
-        : `${data.year}학년도 ${data.program}`;
-
-      const dateHeaderRow = ["", "", "", "", "날짜"];
-      const numHeaderRow = ["No", "학년반", "학번", "이름", "차시"];
-
-      for (let c = 0; c < totalCount; c++) {
-        const item = sessionList[c];
-        dateHeaderRow.push((item.month && item.day) ? `${item.month}/${item.day}` : "/");
-        numHeaderRow.push(item.num);
-      }
-
-      const rows = [
-        [data.schoolName],
-        [line1Text, `${data.subject}반 출석부`, `담당교사 : ${data.teacher} (인)`],
-        [],
-        dateHeaderRow,
-        numHeaderRow
-      ];
-
-      for (let r = 0; r < studentCount; r++) {
-        const studentRow = [r + 1, "", "", "", "/"];
-        for (let c = 0; c < totalCount; c++) {
-          studentRow.push("");
-        }
-        rows.push(studentRow);
-      }
-
-      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_출석부.csv`;
-      triggerCsvDownload(fileName, rows);
     }
 
     // =========================================================================
@@ -1909,9 +1846,16 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [렌더링 헬퍼] 운영계획서 HTML 렌더링 및 sharedPlanData 저장
+    // [렌더링 헬퍼] 운영계획서 HTML 렌더링
     // =========================================================================
     function renderOperationPlanView(data, opPlanData) {
+      // 새로 렌더링 시 편집 모드 초기화
+      editModeState.op = false;
+      const btn = document.getElementById("edit-btn-op");
+      const guide = document.getElementById("edit-guide-op");
+      if (btn) { btn.classList.remove("editing"); btn.innerHTML = "✏️ 내용 직접 수정"; }
+      if (guide) guide.classList.remove("active");
+
       const {
         year, program, subject, teacher, students, room,
         startDate, endDate, schoolName, semesterText, sessions, totalHours
@@ -1937,10 +1881,10 @@ ${blockDetails}`;
               <td style="width: 14px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.dash)}</td>
               <td style="width: 24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.end)}</td>
               <td style="width: 38px; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.hours)}</td>
-              <td style="width: 185px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(item.topic)}</td>
-              <td style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(item.content)}</td>
-              <td style="width: 82px; text-align:center; font-size:10.5px;">${escapeHtml(item.materials)}</td>
-              <td style="width: 72px; text-align:center; font-size:10.5px;">${escapeHtml(item.remarks)}</td>
+              <td class="editable-cell" data-edit-op-idx="${i}" data-edit-field="topic" style="width: 185px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(item.topic)}</td>
+              <td class="editable-cell" data-edit-op-idx="${i}" data-edit-field="content" style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(item.content)}</td>
+              <td class="editable-cell" data-edit-op-idx="${i}" data-edit-field="materials" style="width: 82px; text-align:center; font-size:10.5px;">${escapeHtml(item.materials)}</td>
+              <td class="editable-cell" data-edit-op-idx="${i}" data-edit-field="remarks" style="width: 72px; text-align:center; font-size:10.5px;">${escapeHtml(item.remarks)}</td>
             </tr>
           `;
         } else {
@@ -1949,13 +1893,19 @@ ${blockDetails}`;
               <td style="width: 24px; background:#efefef; text-align:center; border-right:1px dotted #666;"></td>
               <td style="width: 14px; background:#efefef; text-align:center; border-right:1px dotted #666;">-</td>
               <td style="width: 24px; background:#efefef; text-align:center;"></td>
-              <td></td><td></td><td></td><td></td><td></td>
+              <td></td>
+              <td class="editable-cell"></td>
+              <td class="editable-cell"></td>
+              <td class="editable-cell"></td>
+              <td class="editable-cell"></td>
             </tr>
           `;
         }
       }
 
-      document.getElementById("output-op").innerHTML = `
+      const container = document.getElementById("output-op");
+      container.classList.remove("is-editing");
+      container.innerHTML = `
         <div class="a4-page">
           <div class="dashed-box" style="display:inline-block; min-width: 65%; text-align:center; font-size:15px; margin-bottom:10px;">
             ${escapeHtml(headerLineText)}
@@ -1968,23 +1918,23 @@ ${blockDetails}`;
             <tbody>
               <tr style="height:30px;">
                 <th style="width: 155px; background:#fff;">담당 교사</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(formattedTeacher)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(formattedTeacher)}</td>
               </tr>
               <tr style="height:30px;">
                 <th style="background:#fff;">수강 인원</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
               </tr>
               <tr style="height:30px;">
                 <th style="background:#fff;">강 의 실</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
               </tr>
               <tr style="height:30px;">
                 <th style="background:#fff;">지도 기간</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
               </tr>
               <tr style="height:44px;">
                 <th style="background:#fff;">지도 목표</th>
-                <td style="text-align:left; font-size:12px; line-height:1.4; padding:6px 10px;">${escapeHtml(opPlanData.overallGoal)}</td>
+                <td class="editable-cell" data-edit-field="overallGoal" style="text-align:left; font-size:12px; line-height:1.4; padding:6px 10px;">${escapeHtml(opPlanData.overallGoal)}</td>
               </tr>
             </tbody>
           </table>
@@ -2024,6 +1974,12 @@ ${blockDetails}`;
     // [렌더링 헬퍼] 표지 및 차시별 지도일지 HTML 렌더링
     // =========================================================================
     function renderCoverAndSummaryView(data, aiPlanList) {
+      editModeState.cover = false;
+      const btn = document.getElementById("edit-btn-cover");
+      const guide = document.getElementById("edit-guide-cover");
+      if (btn) { btn.classList.remove("editing"); btn.innerHTML = "✏️ 내용 직접 수정"; }
+      if (guide) guide.classList.remove("active");
+
       const {
         year, program, subject, teacher, students, room,
         startDate, endDate, startTime, endTime, schoolName,
@@ -2046,15 +2002,17 @@ ${blockDetails}`;
             <td style="width:14px; background:#efefef; font-weight:bold; text-align:center; font-size:11px; border-right:1px dotted #666;">${escapeHtml(s.dash)}</td>
             <td style="width:24px; background:#efefef; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.end)}</td>
             <td style="width:36px; font-weight:bold; text-align:center; font-size:11px;">${escapeHtml(s.hours)}</td>
-            <td style="width:98px; text-align:center; font-size:11px;">${escapeHtml(s.date)}</td>
-            <td style="width:145px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(aiItem.topic)}</td>
-            <td style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(aiItem.objective)}</td>
-            <td style="width:88px; text-align:left; font-size:10px; line-height:1.3;">${escapeHtml(aiItem.notes)}</td>
+            <td class="editable-cell" style="width:98px; text-align:center; font-size:11px;">${escapeHtml(s.date)}</td>
+            <td class="editable-cell" data-edit-cover-idx="${i}" data-edit-field="topic" style="width:145px; text-align:left; font-size:11px; line-height:1.35;">${escapeHtml(aiItem.topic)}</td>
+            <td class="editable-cell" data-edit-cover-idx="${i}" data-edit-field="objective" style="text-align:left; font-size:10.5px; line-height:1.35;">${escapeHtml(aiItem.objective)}</td>
+            <td class="editable-cell" data-edit-cover-idx="${i}" data-edit-field="notes" style="width:88px; text-align:left; font-size:10px; line-height:1.3;">${escapeHtml(aiItem.notes)}</td>
           </tr>
         `;
       });
 
-      document.getElementById("output-cover").innerHTML = `
+      const container = document.getElementById("output-cover");
+      container.classList.remove("is-editing");
+      container.innerHTML = `
         <!-- 1페이지: 표지 -->
         <div class="a4-page" style="display:flex; flex-direction:column; justify-content:space-between; padding:22mm 18mm;">
           <div>
@@ -2070,23 +2028,23 @@ ${blockDetails}`;
             <tbody>
               <tr style="height:56px;">
                 <th style="width:42%; background:#fff;">담당 교사</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(formattedCoverTeacher)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(formattedCoverTeacher)}</td>
               </tr>
               <tr style="height:56px;">
                 <th style="background:#fff;">수강 인원</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(students)}명</td>
               </tr>
               <tr style="height:56px;">
                 <th style="background:#fff;">강 의 실</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(room)}</td>
               </tr>
               <tr style="height:56px;">
                 <th style="background:#fff;">지도 기간</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(periodText)}</td>
               </tr>
               <tr style="height:56px;">
                 <th style="background:#fff;">지도 시간</th>
-                <td style="text-align:center; font-weight:bold;">${escapeHtml(timeText)}</td>
+                <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(timeText)}</td>
               </tr>
             </tbody>
           </table>
@@ -2145,7 +2103,6 @@ ${blockDetails}`;
       );
 
       sharedPlanData.fingerprint = fp;
-      sharedPlanData.lastBaseData = data;
       sharedPlanData.opPlanData = opPlanData;
       sharedPlanData.lessonPlanList = null;
       sharedPlanData.detailedActivities = null;
@@ -2164,6 +2121,11 @@ ${blockDetails}`;
     async function generateCoverAndSummary() {
       const data = readBaseTaskData();
       if (!data) return;
+
+      // 만약 운영계획서 탭에서 수기 수정 중이었다면 최신 수정내용 먼저 반영
+      if (editModeState.op) {
+        setEditMode("op", false);
+      }
 
       setButtonsDisabled(true);
       updateProgressBar(10, "데이터 분석", "running");
@@ -2188,7 +2150,6 @@ ${blockDetails}`;
         data.subject, data.program, data.semesterText, data.sessions, opPlanData.planItems, candidateModels
       );
 
-      sharedPlanData.lastBaseData = data;
       sharedPlanData.lessonPlanList = aiPlanList;
       sharedPlanData.detailedActivities = null;
 
@@ -2206,6 +2167,10 @@ ${blockDetails}`;
     async function generateDetailedPlans() {
       const data = readBaseTaskData();
       if (!data) return;
+
+      // 상위 탭이 수정 모드였다면 최신 수정내용 먼저 반영
+      if (editModeState.op) setEditMode("op", false);
+      if (editModeState.cover) setEditMode("cover", false);
 
       setButtonsDisabled(true);
       updateProgressBar(5, "데이터 분석", "running");
@@ -2239,10 +2204,15 @@ ${blockDetails}`;
         subject, program, semesterText, sessions, aiPlanList, opPlanData.planItems, candidateModels
       );
 
-      sharedPlanData.lastBaseData = data;
       sharedPlanData.detailedActivities = detailedActivities;
 
       updateProgressBar(90, "시트 서식 구성 (A4 1장 맞춤)", "running");
+
+      editModeState.detail = false;
+      const btn = document.getElementById("edit-btn-detail");
+      const guide = document.getElementById("edit-guide-detail");
+      if (btn) { btn.classList.remove("editing"); btn.innerHTML = "✏️ 내용 직접 수정"; }
+      if (guide) guide.classList.remove("active");
 
       const prefixPart = semesterText ? `${semesterText}  ${program} ( ` : `${program} ( `;
       const suffixPart = ` )반 교수-학습지도안`;
@@ -2281,29 +2251,29 @@ ${blockDetails}`;
               <tbody>
                 <tr style="height:32px;">
                   <th style="width:125px; background:#fff;">지도일시</th>
-                  <td style="width:135px; text-align:center; font-weight:bold;">${escapeHtml(s.date.replace(/\n/g, ", "))}</td>
+                  <td class="editable-cell" style="width:135px; text-align:center; font-weight:bold;">${escapeHtml(s.date.replace(/\n/g, ", "))}</td>
                   <th style="width:90px; background:#fff;">지도시간</th>
-                  <td style="width:125px; text-align:center; font-weight:bold;">${escapeHtml(timeRangeText)}</td>
+                  <td class="editable-cell" style="width:125px; text-align:center; font-weight:bold;">${escapeHtml(timeRangeText)}</td>
                   <th style="width:75px; background:#fff;">차  시</th>
-                  <td style="text-align:center; font-weight:bold;">${escapeHtml(`${s.start} - ${s.end} / ${cumulativeHours}`)}</td>
+                  <td class="editable-cell" style="text-align:center; font-weight:bold;">${escapeHtml(`${s.start} - ${s.end} / ${cumulativeHours}`)}</td>
                 </tr>
                 <tr style="height:36px;">
                   <th style="background:#fff;">주   제</th>
-                  <td colspan="5" style="text-align:left; font-weight:bold; padding-left:10px;">${escapeHtml(aiItem.topic.replace(/\n/g, "  "))}</td>
+                  <td colspan="5" class="editable-cell" data-edit-detail-idx="${i}" data-edit-field="topic" style="text-align:left; font-weight:bold; padding-left:10px;">${escapeHtml(aiItem.topic.replace(/\n/g, "  "))}</td>
                 </tr>
                 <tr style="height:40px;">
                   <th style="background:#fff;">학습 목표</th>
-                  <td colspan="5" style="text-align:left; font-size:11.5px; padding:5px 10px; line-height:1.35;">${escapeHtml(aiItem.objective)}</td>
+                  <td colspan="5" class="editable-cell" data-edit-detail-idx="${i}" data-edit-field="objective" style="text-align:left; font-size:11.5px; padding:5px 10px; line-height:1.35;">${escapeHtml(aiItem.objective)}</td>
                 </tr>
                 <tr style="height:34px;">
                   <th style="background:#fff; font-size:11px;">지도상 유의점 및 자료</th>
-                  <td colspan="5" style="text-align:left; font-size:11.5px; padding-left:10px;">${escapeHtml(aiItem.notes)}</td>
+                  <td colspan="5" class="editable-cell" data-edit-detail-idx="${i}" data-edit-field="notes" style="text-align:left; font-size:11.5px; padding-left:10px;">${escapeHtml(aiItem.notes)}</td>
                 </tr>
                 <tr style="height:30px;">
                   <th colspan="6" style="background:#fff; font-size:13.5px;">학 습 (활 동) &nbsp;&nbsp; 내 &nbsp; 용</th>
                 </tr>
                 <tr>
-                  <td colspan="6" style="vertical-align:top; text-align:left; font-size:${actFontSize}px; line-height:${actLineHeight}; padding:10px 13px; overflow:hidden;">
+                  <td colspan="6" class="editable-cell" data-edit-detail-idx="${i}" data-edit-field="activity" style="vertical-align:top; text-align:left; font-size:${actFontSize}px; line-height:${actLineHeight}; padding:10px 13px; overflow:hidden;">
                     ${escapeHtml(activityText)}
                   </td>
                 </tr>
@@ -2313,7 +2283,9 @@ ${blockDetails}`;
         `;
       });
 
-      document.getElementById("output-detail").innerHTML = pagesHtml;
+      const container = document.getElementById("output-detail");
+      container.classList.remove("is-editing");
+      container.innerHTML = pagesHtml;
 
       setButtonsDisabled(false);
       updateProgressBar(100, `지도안 ${sessions.length}장 완료`, "done");
@@ -2368,15 +2340,13 @@ ${blockDetails}`;
 
       const studentCount = Math.max(20, Number(String(students).replace(/[^0-9]/g, "")) || 24);
 
-      // CSV 다운로드를 위한 출석부 스냅샷 저장
-      sharedPlanData.attendanceSnapshot = {
-        data,
-        sessionList,
-        totalCount,
-        studentCount
-      };
-
       updateProgressBar(85, "차시·날짜 기입 및 1페이지 맞춤", "running");
+
+      editModeState.att = false;
+      const btn = document.getElementById("edit-btn-att");
+      const guide = document.getElementById("edit-guide-att");
+      if (btn) { btn.classList.remove("editing"); btn.innerHTML = "✏️ 내용 직접 수정"; }
+      if (guide) guide.classList.remove("active");
 
       const availableBodyHeightPx = 580;
       const dynamicRowHeight = Math.min(24, Math.max(12.5, Number((availableBodyHeightPx / studentCount).toFixed(2))));
@@ -2398,7 +2368,7 @@ ${blockDetails}`;
         const isShaded = Math.floor(c / 5) % 2 === 0;
         const bg = isShaded ? "#d9d9d9" : "#ffffff";
         const dateLabel = (item.month && item.day) ? `${item.month}/<br>${item.day}` : "/";
-        dateCellsHtml += `<th style="background:${bg}; font-size:${dynamicDateFont}px; padding:1px 0px; line-height:1.08;">${dateLabel}</th>`;
+        dateCellsHtml += `<th class="editable-cell" style="background:${bg}; font-size:${dynamicDateFont}px; padding:1px 0px; line-height:1.08;">${dateLabel}</th>`;
         numCellsHtml += `<th style="background:${bg}; font-size:${dynamicNumFont}px; padding:1px 0px; line-height:1.05;">${item.num}</th>`;
       }
 
@@ -2408,21 +2378,23 @@ ${blockDetails}`;
         for (let c = 0; c < totalCount; c++) {
           const isShaded = Math.floor(c / 5) % 2 === 0;
           const bg = isShaded ? "#d9d9d9" : "#ffffff";
-          sessionEmptyCells += `<td style="background:${bg}; padding:${dynamicCellPadY}px 0px;"></td>`;
+          sessionEmptyCells += `<td class="editable-cell" style="background:${bg}; padding:${dynamicCellPadY}px 0px;"></td>`;
         }
         bodyRowsHtml += `
           <tr style="height:${dynamicRowHeight}px; font-size:${dynamicBodyFont}px; text-align:center; line-height:1.05;">
             <td style="padding:${dynamicCellPadY}px 2px;">${r + 1}</td>
-            <td style="padding:${dynamicCellPadY}px 2px;"></td>
-            <td style="padding:${dynamicCellPadY}px 2px;"></td>
-            <td style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td class="editable-cell" style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td class="editable-cell" style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td class="editable-cell" style="padding:${dynamicCellPadY}px 2px;"></td>
             <td style="color:#555; padding:${dynamicCellPadY}px 1px;">／</td>
             ${sessionEmptyCells}
           </tr>
         `;
       }
 
-      document.getElementById("output-att").innerHTML = `
+      const container = document.getElementById("output-att");
+      container.classList.remove("is-editing");
+      container.innerHTML = `
         <div class="a4-page landscape">
           <div>
             <div style="text-align:right; font-size:12.5px; font-weight:bold; margin-bottom:4px;">
