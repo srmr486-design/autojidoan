@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>방과후·특강 운영계획서 / 지도안 / 출석부 자동 생성기</title>
+  <title>순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</title>
   <style>
     :root {
       --primary: #1a73e8;
@@ -50,7 +50,7 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      font-size: 17px;
+      font-size: 16.5px;
       font-weight: 700;
       color: var(--text);
     }
@@ -436,21 +436,29 @@
     }
     .print-btn:hover { background: #3c4043; }
 
+    /* A4 세로 (기본) */
     .a4-page {
       width: 210mm;
       min-height: 297mm;
       background: #fff;
       margin: 0 auto 24px;
-      padding: 14mm 14mm;
+      padding: 13mm 14mm;
       box-shadow: 0 2px 10px rgba(0,0,0,0.1);
       color: #000;
       position: relative;
     }
 
+    /* A4 가로 (출석부 전용: 정확히 1페이지 높이 고정) */
     .a4-page.landscape {
       width: 297mm;
-      min-height: 210mm;
-      padding: 12mm 12mm;
+      height: 209mm;
+      min-height: 209mm;
+      max-height: 209mm;
+      padding: 9mm 11mm;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }
 
     .dashed-box {
@@ -466,7 +474,7 @@
     }
     .sheet-table th, .sheet-table td {
       border: 1px solid #000;
-      padding: 5px 6px;
+      padding: 4px 5px;
       vertical-align: middle;
     }
     .sheet-table th {
@@ -519,16 +527,39 @@
       color: #dadce0;
     }
 
-    /* 인쇄 전용 스타일 */
+    /* =========================================================================
+       인쇄 전용 스타일: 머리글(시간/제목) & 바닥글(URL/페이지번호) 완전 제거
+       ========================================================================= */
+    @page {
+      margin: 0mm !important;
+    }
+
     @media print {
-      body { background: #fff; display: block; }
-      .topbar, .doc-toolbar, .no-print, .app-footer { display: none !important; }
-      .container { max-width: none; margin: 0; padding: 0; }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        display: block !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      .topbar, .doc-toolbar, .no-print, .app-footer {
+        display: none !important;
+      }
+      .container {
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
       .a4-page {
-        margin: 0;
-        box-shadow: none;
+        margin: 0 !important;
+        box-shadow: none !important;
         page-break-after: always;
         break-after: page;
+      }
+      .a4-page.landscape {
+        height: 209mm !important;
+        max-height: 209mm !important;
       }
       .a4-page:last-child {
         page-break-after: auto;
@@ -536,13 +567,17 @@
       }
     }
   </style>
+  <!-- 동적 @page 용지 방향 제어 스타일 -->
+  <style id="dynamic-page-orientation">
+    @page { size: A4 portrait; margin: 0mm; }
+  </style>
 </head>
 <body>
 
   <!-- 상단 메뉴바 -->
   <header class="topbar">
     <div class="brand">
-      <span>📋 방과후학교 운영계획서/교수학습지도안/출석부 자동생성기_순천공업고등학교</span>
+      <span>📋 순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</span>
     </div>
     <nav class="tabs">
       <button class="tab-btn active" data-tab="base" onclick="switchTab('base')">📝 기본작업</button>
@@ -571,10 +606,10 @@
               <tr><th>학년도</th><td><input type="text" id="inp-year" value="2026" placeholder="예: 2026" /></td></tr>
               <tr><th>학기</th><td><input type="text" id="inp-sem" value="2" placeholder="예: 2 (또는 2학기)" /></td></tr>
               <tr><th>프로그램명</th><td><input type="text" id="inp-program" value="방과후학교 특강" placeholder="예: 방과후학교 특강" /></td></tr>
-              <tr><th>개설강좌</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this)" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
+              <tr><th>과목(반)명</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this)" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
               <tr><th>담당교사</th><td><input type="text" id="inp-teacher" value="유성용" placeholder="예: 홍길동" /></td></tr>
               <tr><th>수강인원</th><td><input type="text" id="inp-students" value="20" placeholder="숫자만 입력 (예: 20)" /></td></tr>
-              <tr><th>강의실</th><td><input type="text" id="inp-room" value="후관동 2층 컴퓨터실" placeholder="예: 정보실 1" /></td></tr>
+              <tr><th>강의실</th><td><input type="text" id="inp-room" value="정보실 1" placeholder="예: 정보실 1" /></td></tr>
               <tr><th>시작일</th><td><input type="text" id="inp-startDate" value="2026. 09. 01" placeholder="예: 2026. 09. 01" /></td></tr>
               <tr><th>종료일</th><td><input type="text" id="inp-endDate" value="2026. 12. 22" placeholder="예: 2026. 12. 22" /></td></tr>
               <tr><th>시작시간</th><td><input type="text" id="inp-startTime" value="16:40" placeholder="예: 16:40" /></td></tr>
@@ -643,12 +678,12 @@
     </section>
 
     <!-- ===================================================================
-         [탭 1] 운영계획서 출력 화면
+         [탭 1] 운영계획서 출력 화면 (A4 세로 디폴트)
          =================================================================== -->
     <section id="panel-op" class="view-panel">
       <div class="doc-toolbar no-print">
-        <span><b>운영계획서</b> 미리보기 (A4 세로 규격)</span>
-        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+        <span><b>운영계획서</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
+        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
       </div>
       <div id="output-op">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[0️⃣ 운영계획서 생성]</b> 버튼을 눌러주세요.</div>
@@ -656,12 +691,12 @@
     </section>
 
     <!-- ===================================================================
-         [탭 2] 표지 및 차시별 지도일지 출력 화면
+         [탭 2] 표지 및 차시별 지도일지 출력 화면 (A4 세로 디폴트)
          =================================================================== -->
     <section id="panel-cover" class="view-panel">
       <div class="doc-toolbar no-print">
-        <span><b>표지 및 차시별 지도일지</b> 미리보기 (A4 세로 2장 구성)</span>
-        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+        <span><b>표지 및 차시별 지도일지</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
+        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
       </div>
       <div id="output-cover">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[1️⃣ 표지 및 차시별 지도일지 생성]</b> 버튼을 눌러주세요.</div>
@@ -669,12 +704,12 @@
     </section>
 
     <!-- ===================================================================
-         [탭 3] 교수-학습지도안(세부) 출력 화면
+         [탭 3] 교수-학습지도안(세부) 출력 화면 (A4 세로 디폴트)
          =================================================================== -->
     <section id="panel-detail" class="view-panel">
       <div class="doc-toolbar no-print">
-        <span><b>교수-학습지도안(세부)</b> 미리보기 (블록당 A4 세로 1장 고정)</span>
-        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+        <span><b>교수-학습지도안(세부)</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
+        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
       </div>
       <div id="output-detail">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[2️⃣ 교수-학습지도안(세부) 생성]</b> 버튼을 눌러주세요.</div>
@@ -682,12 +717,12 @@
     </section>
 
     <!-- ===================================================================
-         [탭 4] 출석부 출력 화면
+         [탭 4] 출석부 출력 화면 (A4 가로 디폴트 & 1페이지 동적 맞춤)
          =================================================================== -->
     <section id="panel-att" class="view-panel">
       <div class="doc-toolbar no-print">
-        <span><b>출석부</b> 미리보기 (A4 가로 규격 권장)</span>
-        <button class="print-btn" onclick="window.print()">🖨️ 인쇄 / PDF 저장</button>
+        <span><b>출석부</b> 미리보기 (기본 인쇄 규격: <b>A4 가로 · 1페이지 자동 맞춤</b> / 머리글·바닥글 자동 제거)</span>
+        <button class="print-btn" onclick="printDocument('landscape')">🖨️ A4 가로 인쇄 / PDF 저장</button>
       </div>
       <div id="output-att">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[3️⃣ 출석부 생성]</b> 버튼을 눌러주세요.</div>
@@ -739,7 +774,20 @@
       return (inp && inp.value.trim()) ? inp.value.trim() : DEFAULT_GEMINI_API_KEY.trim();
     }
 
-    // 탭 전환
+    // 용지 방향 설정 (운영계획서/표지/지도안 = portrait, 출석부 = landscape)
+    function setPageOrientation(orientation) {
+      const styleTag = document.getElementById("dynamic-page-orientation");
+      if (styleTag) {
+        styleTag.innerHTML = `@page { size: A4 ${orientation}; margin: 0mm !important; }`;
+      }
+    }
+
+    function printDocument(orientation) {
+      setPageOrientation(orientation);
+      window.print();
+    }
+
+    // 탭 전환 시 해당 문서의 디폴트 인쇄 용지 방향도 자동 반영
     function switchTab(tabKey) {
       document.querySelectorAll(".tab-btn").forEach(btn => {
         btn.classList.toggle("active", btn.dataset.tab === tabKey);
@@ -747,6 +795,12 @@
       document.querySelectorAll(".view-panel").forEach(panel => {
         panel.classList.toggle("active", panel.id === `panel-${tabKey}`);
       });
+
+      if (tabKey === "att") {
+        setPageOrientation("landscape");
+      } else {
+        setPageOrientation("portrait");
+      }
     }
 
     // D6 셀 폰트 자동 조절 (adjustD6FontSize 재현)
@@ -1461,7 +1515,7 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 0] '운영계획서' 생성
+    // [버튼 0] '운영계획서' 생성 (A4 세로 디폴트)
     // =========================================================================
     async function generateOperationPlan() {
       const data = readBaseTaskData();
@@ -1591,7 +1645,7 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 1] '표지 및 차시별 지도일지' 생성
+    // [버튼 1] '표지 및 차시별 지도일지' 생성 (A4 세로 디폴트)
     // =========================================================================
     async function generateCoverAndSummary() {
       const data = readBaseTaskData();
@@ -1714,7 +1768,7 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 2] '교수학습지도안(세부)' 생성
+    // [버튼 2] '교수학습지도안(세부)' 생성 (A4 세로 디폴트)
     // =========================================================================
     async function generateDetailedPlans() {
       const data = readBaseTaskData();
@@ -1796,9 +1850,9 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 3] '출석부' 생성
+    // [버튼 3] '출석부' 생성 (A4 가로 디폴트 + 인원/차시 증가 시 1페이지 동적 축소)
     // =========================================================================
-    function generateAttendanceOnly() {
+    async function generateAttendanceOnly() {
       const data = readBaseTaskData();
       if (!data) return;
 
@@ -1843,7 +1897,18 @@ ${blockDetails}`;
 
       const studentCount = Math.max(20, Number(String(students).replace(/[^0-9]/g, "")) || 24);
 
-      updateProgressBar(85, "차시·날짜 기입", "running");
+      updateProgressBar(85, "차시·날짜 기입 및 1페이지 맞춤", "running");
+
+      // ★ A4 가로 1페이지(209mm ≈ 789px) 안에 모든 학생 행이 들어가도록 동적 높이/폰트 계산
+      // 상단 학교명 + 타이틀박스 + 표 헤더(날짜/차시) 높이 약 148px 제외 후 가용 높이(약 585px) 분배
+      const availableBodyHeightPx = 580;
+      const dynamicRowHeight = Math.min(24, Math.max(12.5, Number((availableBodyHeightPx / studentCount).toFixed(2))));
+      const dynamicBodyFont = Math.min(11, Math.max(7.2, Number((dynamicRowHeight * 0.56).toFixed(1))));
+      const dynamicCellPadY = dynamicRowHeight < 16 ? 0.5 : (dynamicRowHeight < 19 ? 1.5 : 2.5);
+
+      // 차시 칸 수(가로 열)가 많을 때 차시/날짜 헤더 폰트도 동적 축소
+      const dynamicDateFont = totalCount > 36 ? 7.2 : (totalCount > 26 ? 8.2 : 9.5);
+      const dynamicNumFont = totalCount > 36 ? 7.8 : (totalCount > 26 ? 8.8 : 10);
 
       const line1Text = semesterText
         ? `${year}학년도 ${semesterText} ${program}`
@@ -1856,9 +1921,9 @@ ${blockDetails}`;
         const item = sessionList[c];
         const isShaded = Math.floor(c / 5) % 2 === 0;
         const bg = isShaded ? "#d9d9d9" : "#ffffff";
-        const dateLabel = (item.month && item.day) ? `${item.month} /<br>&nbsp;&nbsp;${item.day}` : "/";
-        dateCellsHtml += `<th style="background:${bg}; font-size:9.5px; padding:2px 1px; line-height:1.15;">${dateLabel}</th>`;
-        numCellsHtml += `<th style="background:${bg}; font-size:10px; padding:2px 1px;">${item.num}</th>`;
+        const dateLabel = (item.month && item.day) ? `${item.month}/<br>${item.day}` : "/";
+        dateCellsHtml += `<th style="background:${bg}; font-size:${dynamicDateFont}px; padding:1px 0px; line-height:1.08;">${dateLabel}</th>`;
+        numCellsHtml += `<th style="background:${bg}; font-size:${dynamicNumFont}px; padding:1px 0px; line-height:1.05;">${item.num}</th>`;
       }
 
       let bodyRowsHtml = "";
@@ -1867,15 +1932,15 @@ ${blockDetails}`;
         for (let c = 0; c < totalCount; c++) {
           const isShaded = Math.floor(c / 5) % 2 === 0;
           const bg = isShaded ? "#d9d9d9" : "#ffffff";
-          sessionEmptyCells += `<td style="background:${bg}; padding:2px;"></td>`;
+          sessionEmptyCells += `<td style="background:${bg}; padding:${dynamicCellPadY}px 0px;"></td>`;
         }
         bodyRowsHtml += `
-          <tr style="height:21px; font-size:11px; text-align:center;">
-            <td>${r + 1}</td>
-            <td></td>
-            <td></td>
-            <td></td>
-            <td style="color:#555;">／</td>
+          <tr style="height:${dynamicRowHeight}px; font-size:${dynamicBodyFont}px; text-align:center; line-height:1.05;">
+            <td style="padding:${dynamicCellPadY}px 2px;">${r + 1}</td>
+            <td style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td style="padding:${dynamicCellPadY}px 2px;"></td>
+            <td style="color:#555; padding:${dynamicCellPadY}px 1px;">／</td>
             ${sessionEmptyCells}
           </tr>
         `;
@@ -1883,32 +1948,34 @@ ${blockDetails}`;
 
       document.getElementById("output-att").innerHTML = `
         <div class="a4-page landscape">
-          <div style="text-align:right; font-size:13px; font-weight:bold; margin-bottom:6px;">
-            ${escapeHtml(schoolName)}
+          <div>
+            <div style="text-align:right; font-size:12.5px; font-weight:bold; margin-bottom:4px;">
+              ${escapeHtml(schoolName)}
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:stretch; gap:8px; margin-bottom:8px;">
+              <div class="dashed-box" style="flex: 1.4; font-size:16px; line-height:1.35; padding:5px 10px;">
+                ${escapeHtml(line1Text)}<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${escapeHtml(line2Text)}
+              </div>
+              <div class="dashed-box" style="flex: 1; display:flex; align-items:flex-end; justify-content:flex-end; font-size:13.5px; padding:5px 10px;">
+                담당교사 : &nbsp;&nbsp; ${escapeHtml(teacher)} &nbsp;&nbsp; (인)
+              </div>
+            </div>
           </div>
 
-          <div style="display:flex; justify-content:space-between; align-items:stretch; gap:8px; margin-bottom:12px;">
-            <div class="dashed-box" style="flex: 1.4; font-size:17px; line-height:1.45;">
-              ${escapeHtml(line1Text)}<br>
-              &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;${escapeHtml(line2Text)}
-            </div>
-            <div class="dashed-box" style="flex: 1; display:flex; align-items:flex-end; justify-content:flex-end; font-size:14px;">
-              담당교사 : &nbsp;&nbsp; ${escapeHtml(teacher)} &nbsp;&nbsp; (인)
-            </div>
-          </div>
-
-          <table class="sheet-table">
+          <table class="sheet-table" style="table-layout: fixed; width: 100%; flex: 1;">
             <thead>
-              <tr style="height:30px; font-size:11.5px;">
-                <th rowspan="2" style="width:34px; background:#fff;">No</th>
-                <th rowspan="2" style="width:70px; background:#fff;">학년반</th>
-                <th rowspan="2" style="width:66px; background:#fff;">학번</th>
-                <th rowspan="2" style="width:68px; background:#fff;">이름</th>
-                <th style="width:44px; background:#fff; border-bottom:1px solid #000;">날짜</th>
+              <tr style="height:26px; font-size:11px;">
+                <th rowspan="2" style="width:28px; background:#fff; padding:2px;">No</th>
+                <th rowspan="2" style="width:62px; background:#fff; padding:2px;">학년반</th>
+                <th rowspan="2" style="width:58px; background:#fff; padding:2px;">학번</th>
+                <th rowspan="2" style="width:60px; background:#fff; padding:2px;">이름</th>
+                <th style="width:38px; background:#fff; border-bottom:1px solid #000; padding:1px;">날짜</th>
                 ${dateCellsHtml}
               </tr>
-              <tr style="height:24px; font-size:11.5px; border-bottom:2px solid #000;">
-                <th style="background:#fff;">차시</th>
+              <tr style="height:20px; font-size:11px; border-bottom:2px solid #000;">
+                <th style="background:#fff; padding:1px;">차시</th>
                 ${numCellsHtml}
               </tr>
             </thead>
