@@ -320,13 +320,16 @@
 
     .helper-bar {
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 10px;
+      flex-direction: column;
+      gap: 4px;
+      margin-bottom: 12px;
+      padding: 9px 12px;
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
       font-size: 12px;
       color: var(--subtext);
-      flex-wrap: wrap;
-      gap: 8px;
+      line-height: 1.45;
     }
 
     .mini-btn {
@@ -566,6 +569,42 @@
       justify-content: space-between;
     }
 
+    /* 출석부 날짜 칸 대각선 스타일 */
+    .att-diag-cell {
+      position: relative;
+      padding: 0 !important;
+      overflow: hidden;
+      vertical-align: middle;
+    }
+    .att-diag-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: block;
+    }
+    .att-diag-month {
+      position: absolute;
+      top: 2px;
+      left: 2.5px;
+      line-height: 1;
+      font-weight: 700;
+      z-index: 2;
+      min-width: 8px;
+      text-align: left;
+    }
+    .att-diag-day {
+      position: absolute;
+      bottom: 2px;
+      right: 2.5px;
+      line-height: 1;
+      font-weight: 700;
+      z-index: 2;
+      min-width: 8px;
+      text-align: right;
+    }
+
     .dashed-box {
       border: 1.5px dashed #e06666;
       padding: 6px 10px;
@@ -720,10 +759,10 @@
               <tr><th>학년도</th><td><input type="text" id="inp-year" value="2026" oninput="invalidateLinkedPlans()" placeholder="예: 2026" /></td></tr>
               <tr><th>학기</th><td><input type="text" id="inp-sem" value="2" oninput="invalidateLinkedPlans()" placeholder="예: 2 (또는 2학기)" /></td></tr>
               <tr><th>프로그램명</th><td><input type="text" id="inp-program" value="방과후학교 특강" oninput="invalidateLinkedPlans()" placeholder="예: 방과후학교 특강" /></td></tr>
-              <tr><th>개설강좌명</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this); invalidateLinkedPlans();" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
+              <tr><th>과목(반)명</th><td><input type="text" id="inp-subject" value="컴퓨터활용능력 2급" oninput="adjustSubjectFont(this); invalidateLinkedPlans();" placeholder="예: 컴퓨터활용능력 2급" /></td></tr>
               <tr><th>담당교사</th><td><input type="text" id="inp-teacher" value="유성용" placeholder="예: 홍길동" /></td></tr>
               <tr><th>수강인원</th><td><input type="text" id="inp-students" value="20" placeholder="숫자만 입력 (예: 20)" /></td></tr>
-              <tr><th>강의실</th><td><input type="text" id="inp-room" value="후관동 2층 컴퓨터실" placeholder="예: 후관동 2층 컴퓨터실" /></td></tr>
+              <tr><th>강의실</th><td><input type="text" id="inp-room" value="정보실 1" placeholder="예: 정보실 1" /></td></tr>
               <tr><th>시작일</th><td><input type="text" id="inp-startDate" value="2026. 09. 01" placeholder="예: 2026. 09. 01" /></td></tr>
               <tr><th>종료일</th><td><input type="text" id="inp-endDate" value="2026. 12. 22" placeholder="예: 2026. 12. 22" /></td></tr>
               <tr><th>시작시간</th><td><input type="text" id="inp-startTime" value="16:40" placeholder="예: 16:40" /></td></tr>
@@ -860,7 +899,7 @@
         </div>
       </div>
       <div class="edit-guide-banner no-print" id="edit-guide-att">
-        ✏️ 직접 수정 모드 활성화: 학년반·학번·이름 및 차시별 출결 칸을 클릭해 직접 입력·수정한 뒤 <b>[✅ 수정 완료]</b>를 눌러주세요.
+        ✏️ 직접 수정 모드 활성화: 학년반·학번·이름 및 날짜(월/일)·차시별 출결 칸을 클릭해 직접 입력·수정한 뒤 <b>[✅ 수정 완료]</b>를 눌러주세요.
       </div>
       <div id="output-att">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[3️⃣ 출석부 생성]</b> 버튼을 눌러주세요.</div>
@@ -946,7 +985,6 @@
     };
 
     function extractEditableText(el) {
-      // innerText는 <br> 및 블록 줄바꿈을 자연스럽게 \n으로 반환함
       return (el.innerText || "").replace(/\r\n/g, "\n").trim();
     }
 
@@ -1000,7 +1038,6 @@
       }
 
       if (!enable && editModeState[tabKey]) {
-        // 수정 완료 시 변경된 내용을 내부 공유 데이터에 동기화
         syncEditedContentToState(tabKey);
       }
 
@@ -1035,7 +1072,6 @@
     }
 
     function printDocument(orientation, tabKey) {
-      // 인쇄 전에 편집 모드가 켜져 있다면 자동 저장 후 편집 테두리 해제
       if (tabKey && editModeState[tabKey]) {
         setEditMode(tabKey, false);
       }
@@ -1286,7 +1322,7 @@
       document.getElementById("inp-subject").value = "컴퓨터활용능력 2급";
       document.getElementById("inp-teacher").value = "유성용";
       document.getElementById("inp-students").value = "20";
-      document.getElementById("inp-room").value = "후관동 2층 컴퓨터실";
+      document.getElementById("inp-room").value = "정보실 1";
       document.getElementById("inp-startDate").value = "2026. 09. 01";
       document.getElementById("inp-endDate").value = "2026. 12. 22";
       document.getElementById("inp-startTime").value = "16:40";
@@ -1849,7 +1885,6 @@ ${blockDetails}`;
     // [렌더링 헬퍼] 운영계획서 HTML 렌더링
     // =========================================================================
     function renderOperationPlanView(data, opPlanData) {
-      // 새로 렌더링 시 편집 모드 초기화
       editModeState.op = false;
       const btn = document.getElementById("edit-btn-op");
       const guide = document.getElementById("edit-guide-op");
@@ -2122,7 +2157,6 @@ ${blockDetails}`;
       const data = readBaseTaskData();
       if (!data) return;
 
-      // 만약 운영계획서 탭에서 수기 수정 중이었다면 최신 수정내용 먼저 반영
       if (editModeState.op) {
         setEditMode("op", false);
       }
@@ -2168,7 +2202,6 @@ ${blockDetails}`;
       const data = readBaseTaskData();
       if (!data) return;
 
-      // 상위 탭이 수정 모드였다면 최신 수정내용 먼저 반영
       if (editModeState.op) setEditMode("op", false);
       if (editModeState.cover) setEditMode("cover", false);
 
@@ -2293,7 +2326,7 @@ ${blockDetails}`;
     }
 
     // =========================================================================
-    // [버튼 3] '출석부' 생성 (A4 가로 디폴트 + 인원/차시 증가 시 1페이지 동적 축소)
+    // [버튼 3] '출석부' 생성 (A4 가로 디폴트 + 날짜 칸 SVG 벡터 대각선 + 1페이지 동적 맞춤)
     // =========================================================================
     async function generateAttendanceOnly() {
       const data = readBaseTaskData();
@@ -2340,7 +2373,7 @@ ${blockDetails}`;
 
       const studentCount = Math.max(20, Number(String(students).replace(/[^0-9]/g, "")) || 24);
 
-      updateProgressBar(85, "차시·날짜 기입 및 1페이지 맞춤", "running");
+      updateProgressBar(85, "차시·날짜 대각선 기입 및 1페이지 맞춤", "running");
 
       editModeState.att = false;
       const btn = document.getElementById("edit-btn-att");
@@ -2348,12 +2381,13 @@ ${blockDetails}`;
       if (btn) { btn.classList.remove("editing"); btn.innerHTML = "✏️ 내용 직접 수정"; }
       if (guide) guide.classList.remove("active");
 
-      const availableBodyHeightPx = 580;
+      const availableBodyHeightPx = 576;
       const dynamicRowHeight = Math.min(24, Math.max(12.5, Number((availableBodyHeightPx / studentCount).toFixed(2))));
       const dynamicBodyFont = Math.min(11, Math.max(7.2, Number((dynamicRowHeight * 0.56).toFixed(1))));
       const dynamicCellPadY = dynamicRowHeight < 16 ? 0.5 : (dynamicRowHeight < 19 ? 1.5 : 2.5);
 
-      const dynamicDateFont = totalCount > 36 ? 7.2 : (totalCount > 26 ? 8.2 : 9.5);
+      // 대각선 셀 내부 월/일 폰트 크기 (차시 칸 수에 따라 자동 비례 조절)
+      const dynamicDiagFont = totalCount > 36 ? 6.8 : (totalCount > 26 ? 7.8 : 8.8);
       const dynamicNumFont = totalCount > 36 ? 7.8 : (totalCount > 26 ? 8.8 : 10);
 
       const line1Text = semesterText
@@ -2367,8 +2401,17 @@ ${blockDetails}`;
         const item = sessionList[c];
         const isShaded = Math.floor(c / 5) % 2 === 0;
         const bg = isShaded ? "#d9d9d9" : "#ffffff";
-        const dateLabel = (item.month && item.day) ? `${item.month}/<br>${item.day}` : "/";
-        dateCellsHtml += `<th class="editable-cell" style="background:${bg}; font-size:${dynamicDateFont}px; padding:1px 0px; line-height:1.08;">${dateLabel}</th>`;
+
+        // 우상단(100,0) -> 좌하단(0,100) 벡터 대각선 + 좌측 상단 월 / 우측 하단 일 배치
+        dateCellsHtml += `
+          <th class="att-diag-cell" style="background:${bg}; height:30px;">
+            <svg class="att-diag-svg" viewBox="0 0 100 100" preserveAspectRatio="none">
+              <line x1="100" y1="0" x2="0" y2="100" stroke="#000000" stroke-width="1" vector-effect="non-scaling-stroke" />
+            </svg>
+            <span class="editable-cell att-diag-month" style="font-size:${dynamicDiagFont}px;">${escapeHtml(item.month)}</span>
+            <span class="editable-cell att-diag-day" style="font-size:${dynamicDiagFont}px;">${escapeHtml(item.day)}</span>
+          </th>
+        `;
         numCellsHtml += `<th style="background:${bg}; font-size:${dynamicNumFont}px; padding:1px 0px; line-height:1.05;">${item.num}</th>`;
       }
 
@@ -2414,7 +2457,7 @@ ${blockDetails}`;
 
           <table class="sheet-table" style="table-layout: fixed; width: 100%; flex: 1;">
             <thead>
-              <tr style="height:26px; font-size:11px;">
+              <tr style="height:30px; font-size:11px;">
                 <th rowspan="2" style="width:28px; background:#fff; padding:2px;">No</th>
                 <th rowspan="2" style="width:62px; background:#fff; padding:2px;">학년반</th>
                 <th rowspan="2" style="width:58px; background:#fff; padding:2px;">학번</th>
