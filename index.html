@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</title>
+  <title>[딸깍이] 순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</title>
   <style>
     :root {
       --primary: #1a73e8;
@@ -49,10 +49,22 @@
     .brand {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
       font-size: 16.5px;
       font-weight: 700;
       color: var(--text);
+    }
+
+    .brand-app-name {
+      font-size: 22px;
+      font-weight: 900;
+      color: #1a73e8;
+      background: #e8f0fe;
+      padding: 3px 11px;
+      border-radius: 8px;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
     }
 
     .tabs {
@@ -417,12 +429,36 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
       background: #fff;
       padding: 10px 16px;
       border: 1px solid var(--border);
       border-radius: 8px;
       margin-bottom: 16px;
     }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .csv-btn {
+      background: #137333;
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .csv-btn:hover { background: #0d5626; }
 
     .print-btn {
       background: #202124;
@@ -592,6 +628,7 @@
   <!-- 상단 메뉴바 -->
   <header class="topbar">
     <div class="brand">
+      <span class="brand-app-name">딸깍이</span>
       <span>📋 순천공업고등학교 방과후학교 운영계획서/교수학습지도안/출석부 자동생성 프로그램</span>
     </div>
     <nav class="tabs">
@@ -693,12 +730,15 @@
     </section>
 
     <!-- ===================================================================
-         [탭 1] 운영계획서 출력 화면 (A4 세로 디폴트)
+         [탭 1] 운영계획서 출력 화면 (A4 세로 디폴트 + CSV 다운로드)
          =================================================================== -->
     <section id="panel-op" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>운영계획서</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
-        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        <div class="toolbar-actions">
+          <button class="csv-btn" onclick="downloadOperationPlanCSV()">📥 CSV 다운로드 (수기수정용)</button>
+          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        </div>
       </div>
       <div id="output-op">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[0️⃣ 운영계획서 생성]</b> 버튼을 눌러주세요.</div>
@@ -706,12 +746,15 @@
     </section>
 
     <!-- ===================================================================
-         [탭 2] 표지 및 차시별 지도일지 출력 화면 (A4 세로 디폴트)
+         [탭 2] 표지 및 차시별 지도일지 출력 화면 (A4 세로 디폴트 + CSV 다운로드)
          =================================================================== -->
     <section id="panel-cover" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>표지 및 차시별 지도일지</b> 미리보기 (기본 인쇄 규격: <b>A4 세로</b> / 머리글·바닥글 자동 제거)</span>
-        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        <div class="toolbar-actions">
+          <button class="csv-btn" onclick="downloadCoverAndSummaryCSV()">📥 CSV 다운로드 (수기수정용)</button>
+          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        </div>
       </div>
       <div id="output-cover">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[1️⃣ 표지 및 차시별 지도일지 생성]</b> 버튼을 눌러주세요.</div>
@@ -719,12 +762,15 @@
     </section>
 
     <!-- ===================================================================
-         [탭 3] 교수-학습지도안(세부) 출력 화면 (A4 세로 1페이지 고정 디폴트)
+         [탭 3] 교수-학습지도안(세부) 출력 화면 (A4 세로 1페이지 고정 + CSV 다운로드)
          =================================================================== -->
     <section id="panel-detail" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>교수-학습지도안(세부)</b> 미리보기 (기본 인쇄 규격: <b>A4 세로 · 1장씩 고정</b> / 머리글·바닥글 자동 제거)</span>
-        <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        <div class="toolbar-actions">
+          <button class="csv-btn" onclick="downloadDetailedPlansCSV()">📥 CSV 다운로드 (수기수정용)</button>
+          <button class="print-btn" onclick="printDocument('portrait')">🖨️ A4 세로 인쇄 / PDF 저장</button>
+        </div>
       </div>
       <div id="output-detail">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[2️⃣ 교수-학습지도안(세부) 생성]</b> 버튼을 눌러주세요.</div>
@@ -732,12 +778,15 @@
     </section>
 
     <!-- ===================================================================
-         [탭 4] 출석부 출력 화면 (A4 가로 디폴트 & 1페이지 동적 맞춤)
+         [탭 4] 출석부 출력 화면 (A4 가로 디폴트 & 1페이지 동적 맞춤 + CSV 다운로드)
          =================================================================== -->
     <section id="panel-att" class="view-panel">
       <div class="doc-toolbar no-print">
         <span><b>출석부</b> 미리보기 (기본 인쇄 규격: <b>A4 가로 · 1페이지 자동 맞춤</b> / 머리글·바닥글 자동 제거)</span>
-        <button class="print-btn" onclick="printDocument('landscape')">🖨️ A4 가로 인쇄 / PDF 저장</button>
+        <div class="toolbar-actions">
+          <button class="csv-btn" onclick="downloadAttendanceCSV()">📥 CSV 다운로드 (수기수정용)</button>
+          <button class="print-btn" onclick="printDocument('landscape')">🖨️ A4 가로 인쇄 / PDF 저장</button>
+        </div>
       </div>
       <div id="output-att">
         <div class="empty-placeholder">'기본작업' 탭에서 <b>[3️⃣ 출석부 생성]</b> 버튼을 눌러주세요.</div>
@@ -790,12 +839,15 @@
     }
 
     // =========================================================================
-    // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안)
+    // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안 -> CSV 내보내기)
     // =========================================================================
     let sharedPlanData = {
-      fingerprint: "",     // 기본정보(과목/학기/프로그램) + 차시 시수 조합 지문
-      opPlanData: null,    // [0단계] 운영계획서 데이터 ({ overallGoal, planItems: [{topic, content, materials, remarks}] })
-      lessonPlanList: null // [1단계] 표지 및 지도일지 데이터 ([{ topic, objective, notes }])
+      fingerprint: "",        // 기본정보(과목/학기/프로그램) + 차시 시수 조합 지문
+      lastBaseData: null,      // 마지막 생성 시점의 기본작업 데이터 스냅샷
+      opPlanData: null,        // [0단계] 운영계획서 데이터 ({ overallGoal, planItems: [{topic, content, materials, remarks}] })
+      lessonPlanList: null,    // [1단계] 표지 및 지도일지 데이터 ([{ topic, objective, notes }])
+      detailedActivities: null,// [2단계] 교수학습지도안 세부 활동 배열 ([String])
+      attendanceSnapshot: null // [3단계] 출석부 스냅샷 ({ data, sessionList, totalCount, studentCount })
     };
 
     function buildPlanFingerprint(data) {
@@ -807,6 +859,7 @@
       sharedPlanData.fingerprint = "";
       sharedPlanData.opPlanData = null;
       sharedPlanData.lessonPlanList = null;
+      sharedPlanData.detailedActivities = null;
     }
 
     // 용지 방향 설정 (운영계획서/표지/지도안 = portrait, 출석부 = landscape)
@@ -1250,6 +1303,212 @@
       return spaceBeforeParen
         ? `${sDate} ~ ${eDate} (${hours}차시)`
         : `${sDate} ~ ${eDate}( ${hours}차시)`;
+    }
+
+    // =========================================================================
+    // ★ CSV 파일 생성 및 다운로드 공통 유틸리티 (UTF-8 BOM 적용 -> 엑셀 한글 깨짐 방지)
+    // =========================================================================
+    function sanitizeFileName(name) {
+      return String(name || "문서").replace(/[\\/:*?"<>|]/g, "_").trim();
+    }
+
+    function triggerCsvDownload(filename, rows2D) {
+      const csvContent = rows2D.map(row =>
+        row.map(cell => {
+          const val = String(cell === null || cell === undefined ? "" : cell);
+          // 쉼표, 큰따옴표, 줄바꿈이 포함된 경우 큰따옴표로 감싸고 내부 큰따옴표는 이스케이프
+          if (/[",\r\n]/.test(val)) {
+            return `"${val.replace(/"/g, '""')}"`;
+          }
+          return val;
+        }).join(",")
+      ).join("\r\n");
+
+      const bom = "\uFEFF";
+      const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    // [CSV 0] 운영계획서 CSV 다운로드
+    function downloadOperationPlanCSV() {
+      if (!sharedPlanData.opPlanData) {
+        alert("먼저 [0️⃣ 운영계획서 생성] 버튼을 눌러 운영계획서를 생성해주세요.");
+        return;
+      }
+      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
+      const op = sharedPlanData.opPlanData;
+      const headerLine = data.semesterText
+        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
+        : `${data.year}학년도 ${data.program}`;
+      const periodText = formatPeriodText(data.startDate, data.endDate, data.totalHours, true);
+
+      const rows = [
+        [headerLine],
+        [`${data.subject} 반 운영 계획서`],
+        [],
+        ["담당 교사", `${data.teacher} (인)`],
+        ["수강 인원", `${data.students}명`],
+        ["강의실", data.room],
+        ["지도 기간", periodText],
+        ["지도 목표", op.overallGoal || ""],
+        [],
+        ["[차시별 지도 계획]"],
+        ["시작차시", "종료차시", "시수", "학습 주제", "학습 내용", "준비물", "비고"]
+      ];
+
+      data.sessions.forEach((s, idx) => {
+        const item = (op.planItems && op.planItems[idx]) || { topic: "", content: "", materials: "", remarks: "" };
+        rows.push([
+          s.start,
+          s.end,
+          s.hours,
+          item.topic || "",
+          item.content || "",
+          item.materials || "",
+          item.remarks || ""
+        ]);
+      });
+
+      rows.push(["총", "", data.totalHours, "시수", "", "", ""]);
+      rows.push([]);
+      rows.push(["학교명", data.schoolName]);
+
+      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_운영계획서.csv`;
+      triggerCsvDownload(fileName, rows);
+    }
+
+    // [CSV 1] 표지 및 차시별 지도일지 CSV 다운로드
+    function downloadCoverAndSummaryCSV() {
+      if (!sharedPlanData.lessonPlanList) {
+        alert("먼저 [1️⃣ 표지 및 차시별 지도일지 생성] 버튼을 눌러 지도일지를 생성해주세요.");
+        return;
+      }
+      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
+      const list = sharedPlanData.lessonPlanList;
+      const headerLine = data.semesterText
+        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
+        : `${data.year}학년도 ${data.program}`;
+      const periodText = formatPeriodText(data.startDate, data.endDate, data.totalHours, false);
+      const timeText = (data.startTime && data.endTime) ? `${data.startTime} ~ ${data.endTime}` : (data.startTime || data.endTime || "");
+
+      const rows = [
+        [headerLine],
+        [`${data.subject} 반 교수-학습 지도안 (표지 및 차시별 지도일지)`],
+        [],
+        ["담당 교사", `${data.teacher} (인)`],
+        ["수강 인원", `${data.students}명`],
+        ["강의실", data.room],
+        ["지도 기간", periodText],
+        ["지도 시간", timeText],
+        ["학교명", data.schoolName],
+        [],
+        ["[차시별 지도 내용]"],
+        ["시작차시", "종료차시", "시수", "지도일시", "학습 주제", "학습 목표", "유의점 및 자료"]
+      ];
+
+      data.sessions.forEach((s, idx) => {
+        const item = list[idx] || { topic: "", objective: "", notes: "" };
+        rows.push([
+          s.start,
+          s.end,
+          s.hours,
+          s.date,
+          item.topic || "",
+          item.objective || "",
+          item.notes || ""
+        ]);
+      });
+
+      rows.push(["총", "", data.totalHours, "시수", "", "", ""]);
+
+      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_표지및지도일지.csv`;
+      triggerCsvDownload(fileName, rows);
+    }
+
+    // [CSV 2] 교수-학습지도안(세부) CSV 다운로드
+    function downloadDetailedPlansCSV() {
+      if (!sharedPlanData.detailedActivities || !sharedPlanData.lessonPlanList) {
+        alert("먼저 [2️⃣ 교수-학습지도안(세부) 생성] 버튼을 눌러 세부 지도안을 생성해주세요.");
+        return;
+      }
+      const data = readBaseTaskData() || sharedPlanData.lastBaseData;
+      const list = sharedPlanData.lessonPlanList;
+      const acts = sharedPlanData.detailedActivities;
+      const prefixPart = data.semesterText ? `${data.semesterText} ${data.program} (` : `${data.program} (`;
+
+      const rows = [
+        [`${prefixPart}${data.subject})반 교수-학습지도안 (세부)`],
+        [],
+        ["순번", "지도일시", "지도시간", "차시(누적)", "주제", "학습 목표", "지도상 유의점 및 자료", "학습(활동) 내용"]
+      ];
+
+      let cumulativeHours = 0;
+      data.sessions.forEach((s, idx) => {
+        const item = list[idx] || { topic: "", objective: "", notes: "" };
+        const actText = acts[idx] || "";
+        cumulativeHours += Number(s.hours) || 0;
+
+        rows.push([
+          idx + 1,
+          s.date.replace(/\n/g, ", "),
+          data.timeRangeText,
+          `${s.start} - ${s.end} / ${cumulativeHours}`,
+          item.topic.replace(/\n/g, " "),
+          item.objective || "",
+          item.notes || "",
+          actText
+        ]);
+      });
+
+      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_교수학습지도안_세부.csv`;
+      triggerCsvDownload(fileName, rows);
+    }
+
+    // [CSV 3] 출석부 CSV 다운로드
+    function downloadAttendanceCSV() {
+      if (!sharedPlanData.attendanceSnapshot) {
+        alert("먼저 [3️⃣ 출석부 생성] 버튼을 눌러 출석부를 생성해주세요.");
+        return;
+      }
+      const { data, sessionList, totalCount, studentCount } = sharedPlanData.attendanceSnapshot;
+      const line1Text = data.semesterText
+        ? `${data.year}학년도 ${data.semesterText} ${data.program}`
+        : `${data.year}학년도 ${data.program}`;
+
+      const dateHeaderRow = ["", "", "", "", "날짜"];
+      const numHeaderRow = ["No", "학년반", "학번", "이름", "차시"];
+
+      for (let c = 0; c < totalCount; c++) {
+        const item = sessionList[c];
+        dateHeaderRow.push((item.month && item.day) ? `${item.month}/${item.day}` : "/");
+        numHeaderRow.push(item.num);
+      }
+
+      const rows = [
+        [data.schoolName],
+        [line1Text, `${data.subject}반 출석부`, `담당교사 : ${data.teacher} (인)`],
+        [],
+        dateHeaderRow,
+        numHeaderRow
+      ];
+
+      for (let r = 0; r < studentCount; r++) {
+        const studentRow = [r + 1, "", "", "", "/"];
+        for (let c = 0; c < totalCount; c++) {
+          studentRow.push("");
+        }
+        rows.push(studentRow);
+      }
+
+      const fileName = `${sanitizeFileName(data.year)}_${sanitizeFileName(data.subject)}_출석부.csv`;
+      triggerCsvDownload(fileName, rows);
     }
 
     // =========================================================================
@@ -1813,8 +2072,10 @@ ${blockDetails}`;
       );
 
       sharedPlanData.fingerprint = fp;
+      sharedPlanData.lastBaseData = data;
       sharedPlanData.opPlanData = opPlanData;
       sharedPlanData.lessonPlanList = null;
+      sharedPlanData.detailedActivities = null;
 
       updateProgressBar(75, "시트 서식 구성", "running");
       renderOperationPlanView(data, opPlanData);
@@ -1854,7 +2115,9 @@ ${blockDetails}`;
         data.subject, data.program, data.semesterText, data.sessions, opPlanData.planItems, candidateModels
       );
 
+      sharedPlanData.lastBaseData = data;
       sharedPlanData.lessonPlanList = aiPlanList;
+      sharedPlanData.detailedActivities = null;
 
       updateProgressBar(80, "표지 및 총괄표 구성", "running");
       renderCoverAndSummaryView(data, aiPlanList);
@@ -1902,6 +2165,9 @@ ${blockDetails}`;
       const detailedActivities = await fetchGeminiDetailedActivities(
         subject, program, semesterText, sessions, aiPlanList, opPlanData.planItems, candidateModels
       );
+
+      sharedPlanData.lastBaseData = data;
+      sharedPlanData.detailedActivities = detailedActivities;
 
       updateProgressBar(90, "시트 서식 구성 (A4 1장 맞춤)", "running");
 
@@ -2028,6 +2294,14 @@ ${blockDetails}`;
       }
 
       const studentCount = Math.max(20, Number(String(students).replace(/[^0-9]/g, "")) || 24);
+
+      // CSV 다운로드를 위한 출석부 스냅샷 저장
+      sharedPlanData.attendanceSnapshot = {
+        data,
+        sessionList,
+        totalCount,
+        studentCount
+      };
 
       updateProgressBar(85, "차시·날짜 기입 및 1페이지 맞춤", "running");
 
