@@ -727,7 +727,7 @@
         <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
         <div class="card">
           <h2 class="card-title">
-            <span>1. 기본 정보 입력 (D3:D14)</span>
+            <span>1. 기본 정보 입력</span>
             <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
           </h2>
 
@@ -766,7 +766,7 @@
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
         <div class="card">
           <h2 class="card-title">
-            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
+            <span>2. 차시별 시수 및 지도일시 입력</span>
             <div>
               <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
               <button class="mini-btn" onclick="resetSessions()">초기화</button>
@@ -775,7 +775,7 @@
 
           <div class="helper-bar">
             <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Please wait and try again</b></span>
-            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다.</span>
+            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 중간에 오류가 생기면 새로고침하지 않고, <b>다시 생성버튼</b>을 눌러주세요.</span>
           </div>
 
           <table class="session-table" id="session-table">
@@ -881,7 +881,7 @@
   <!-- 하단 중앙 저작자 및 버전 표시 -->
   <footer class="app-footer no-print">
     <div class="footer-badge">
-      <span>버전 <span class="ver-tag">autojidoan_v1_20261122_gas</span></span>
+      <span>버전 <span class="ver-tag">autojidoan_v1_20261120_1123</span></span>
       <span class="divider">|</span>
       <span>만듦이 <b>useoaeT</b></span>
       <span class="divider">|</span>
@@ -916,7 +916,7 @@
 
   <script>
     // ★ Google Apps Script 웹 앱 프록시 URL (API 키는 GAS 서버 스크립트 속성에 안전하게 보관됨)
-    const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbzWl00wElVp4DzJOvZbtpKcLgB_bAm4qTMbwZvFKOMJBUshi-Cg1Y14QVI8hlVlLBcWtA/exec";
+    const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbxhBdA3gVNgN6w_zpIfor07Pw_xc4EcT0gCfc88khJccK4bd2XTkdRmKQQxFfDJPILX/exec";
 
     // =========================================================================
     // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안)
@@ -1506,27 +1506,6 @@
         .replace(/\n/g, "<br>");
     }
 
-    // ★ AI 응답에서 줄바꿈(\n)이 누락된 경우 개조식 기호 기준으로 줄바꿈 자동 복원
-    function formatActivityText(rawText) {
-      let text = String(rawText || "").trim();
-      if (!text) return "";
-
-      // 이미 줄바꿈이 충분히 포함된 정상 응답(15줄 이상)이면 그대로 유지
-      const lineCount = (text.match(/\n/g) || []).length;
-      if (lineCount >= 15) {
-        return text;
-      }
-
-      // 줄바꿈이 누락된 경우 기호 앞에 강제 줄바꿈 복원
-      text = text
-        .replace(/\s*(■\s*학습\s*활동)/g, "\n\n$1")
-        .replace(/\s+([1-9]\.\s)/g, "\n$1")
-        .replace(/\s+-\s+(?=[가-힣A-Za-z\[])/g, "\n  - ")
-        .replace(/\s*•\s*/g, "\n  • ");
-
-      return text.trim();
-    }
-
     function formatPeriodText(sDate, eDate, hours, spaceBeforeParen = false) {
       const parseKoreanDate = (str) => {
         const parts = str.split(".").map(s => s.trim()).filter(Boolean);
@@ -1545,56 +1524,39 @@
     }
 
     // =========================================================================
-    // 공통 유틸: GAS 프록시 서버를 통한 안전한 Gemini JSON 호출기 (자동 재시도 포함)
+    // 공통 유틸: GAS 프록시 서버를 통한 안전한 Gemini JSON 호출기
     // =========================================================================
     async function callGeminiWithFallback(prompt, schema) {
       if (!GAS_PROXY_URL || GAS_PROXY_URL.includes("여기에_배포된_URL")) {
         return { code: "CONFIG", message: "GAS_PROXY_URL이 설정되지 않았습니다.", model: "GAS" };
       }
 
-      const maxRetries = 3;
-      let lastErrMsg = "";
+      try {
+        const response = await fetch(GAS_PROXY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify({ prompt, schema })
+        });
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          const response = await fetch(GAS_PROXY_URL, {
-            method: "POST",
-            headers: {
-              "Content-Type": "text/plain;charset=utf-8"
-            },
-            body: JSON.stringify({ prompt, schema })
-          });
-
-          if (!response.ok) {
-            lastErrMsg = `HTTP ${response.status} 서버 응답 오류`;
-            if (attempt < maxRetries) {
-              await new Promise(r => setTimeout(r, 1500 * attempt));
-              continue;
-            }
-            return { code: response.status, message: lastErrMsg, model: "GAS" };
-          }
-
-          const resJson = await response.json();
-          if (resJson.success) {
-            return resJson.data;
-          } else {
-            return {
-              code: resJson.code || "ERR",
-              message: resJson.message || "알 수 없는 오류",
-              model: resJson.model || "GAS"
-            };
-          }
-        } catch (err) {
-          lastErrMsg = String(err);
-          // Failed to fetch 등 일시적 네트워크/리다이렉트 끊김 시 대기 후 재시도
-          if (attempt < maxRetries) {
-            await new Promise(r => setTimeout(r, 1500 * attempt));
-            continue;
-          }
+        if (!response.ok) {
+          return { code: response.status, message: "GAS 서버 통신 오류", model: "GAS" };
         }
-      }
 
-      return { code: "NETWORK", message: lastErrMsg, model: "GAS" };
+        const resJson = await response.json();
+        if (resJson.success) {
+          return resJson.data;
+        } else {
+          return {
+            code: resJson.code || "ERR",
+            message: resJson.message || "알 수 없는 오류",
+            model: resJson.model || "GAS"
+          };
+        }
+      } catch (err) {
+        return { code: "NETWORK", message: String(err), model: "GAS" };
+      }
     }
 
     // =========================================================================
@@ -1729,7 +1691,7 @@ ${sessionSummary}`;
     // =========================================================================
     async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems) {
       const allResults = [];
-      const batchSize = 2; // 한 번에 2장씩만 생성하여 JSON 잘림 방지
+      const batchSize = 2;
 
       for (let startIdx = 0; startIdx < sessions.length; startIdx += batchSize) {
         const endIdx = Math.min(startIdx + batchSize, sessions.length);
@@ -1753,7 +1715,7 @@ ${sessionSummary}`;
 2. **'도입', '전개', '정리'라는 단계 구분 제목을 절대 사용하지 마세요.** 하나의 통합된 개괄식 구조 안에 '실제 학습할 핵심 교과 내용'과 '수업 활동 안내'를 자연스럽게 이어서 구성하세요.
 3. **절대 줄글(서술형 문단)로 쓰지 마세요.** 반드시 항목별 기호(■, 1., -, •)와 명사형/간결한 개조식 종결("~확인", "~이해", "~설명", "~실습하기", "~해결하기")을 사용한 **개괄식(개조식)**으로만 작성하세요.
 4. **글자 수 엄수 (A4 1페이지 맞춤):** 각 지도안당 전체 글자 수는 **공백 포함 1,100자 내외(최소 1,000자 ~ 최대 1,150자 범위)**로 정확히 맞추어 작성하세요. 1,000자 미만으로 너무 짧거나 1,200자를 초과하여 A4 1페이지를 넘기지 않도록 핵심 교과 개념·공식·원리·기능 및 학생 활동 절차를 알차고 균형 있게 구성하세요.
-5. 반드시 아래 2가지 대항목 구조를 갖추어 각 줄마다 줄바꿈(\\n)으로 깔끔하게 구분하세요.
+5. 반드시 아래 2가지 대항목 구조를 갖추어 줄바꿈(\\n)으로 깔끔하게 구분하세요.
 
 [필수 출력 구조 예시]
 ■ 핵심 학습 내용
@@ -1793,7 +1755,7 @@ ${blockDetails}`;
         const result = await callGeminiWithFallback(prompt, schema);
         if (Array.isArray(result)) {
           for (let k = 0; k < chunkSessions.length; k++) {
-            allResults.push(formatActivityText(result[k] || ""));
+            allResults.push(result[k] || "");
           }
         } else {
           for (let k = 0; k < chunkSessions.length; k++) {
@@ -2174,7 +2136,7 @@ ${blockDetails}`;
 
       sessions.forEach((s, i) => {
         const aiItem = aiPlanList[i] || { topic: "", objective: "", notes: "" };
-        const activityText = formatActivityText(detailedActivities[i] || "");
+        const activityText = detailedActivities[i] || "";
         cumulativeHours += Number(s.hours) || 0;
 
         // 글자 수 및 줄바꿈 수에 따라 폰트·줄간격을 자동 미세 조정하여 반드시 A4 세로 1장 안에 수납
