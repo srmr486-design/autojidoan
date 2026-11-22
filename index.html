@@ -145,7 +145,7 @@
       align-items: center;
     }
 
-    /* 기본 정보 테이블 */
+    /* 기본 정보 테이블 (D3:D14 재현) */
     .info-form-table {
       width: 100%;
       border-collapse: collapse;
@@ -182,7 +182,7 @@
       border-radius: 3px;
     }
 
-    /* 실행 버튼 & 진행현황 박스 */
+    /* 실행 버튼 & 진행현황 박스 (H18:J19 재현) */
     .action-panel {
       margin-top: 16px;
       display: flex;
@@ -254,7 +254,7 @@
       letter-spacing: 0.3px;
     }
 
-    /* 차시별 시수 및 지도일시 테이블 */
+    /* 차시별 시수 및 지도일시 테이블 (B18:F총 재현) */
     .session-table {
       width: 100%;
       border-collapse: collapse;
@@ -720,14 +720,14 @@
 
   <main class="container">
     <!-- ===================================================================
-         [탭 0] 기본작업 화면
+         [탭 0] 기본작업 화면 (D3:D14 & B18:F총 & H18:J19 재현)
          =================================================================== -->
     <section id="panel-base" class="view-panel active">
       <div class="base-grid">
         <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
         <div class="card">
           <h2 class="card-title">
-            <span>1. 기본 정보 입력</span>
+            <span>1. 기본 정보 입력 (D3:D14)</span>
             <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
           </h2>
 
@@ -756,7 +756,7 @@
             <button class="action-btn btn-att" id="btn-run-att" onclick="generateAttendanceOnly()">3️⃣ 출석부 생성</button>
           </div>
 
-          <!-- 실시간 프로그래스바 -->
+          <!-- H18:J19 실시간 프로그래스바 -->
           <div class="progress-box">
             <div class="progress-title" id="prog-title">진행현황</div>
             <div class="progress-bar-cell" id="prog-bar">대기 중 (버튼을 누르면 진행 상황이 표시됩니다)</div>
@@ -766,7 +766,7 @@
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
         <div class="card">
           <h2 class="card-title">
-            <span>2. 차시별 시수 및 지도일시 입력</span>
+            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
             <div>
               <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
               <button class="mini-btn" onclick="resetSessions()">초기화</button>
@@ -775,7 +775,7 @@
 
           <div class="helper-bar">
             <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Please wait and try again</b></span>
-            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 중간에 오류가 생기면 새로고침하지 않고, <b>다시 생성버튼</b>을 눌러주세요.</span>
+            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다.</span>
           </div>
 
           <table class="session-table" id="session-table">
@@ -881,7 +881,7 @@
   <!-- 하단 중앙 저작자 및 버전 표시 -->
   <footer class="app-footer no-print">
     <div class="footer-badge">
-      <span>버전 <span class="ver-tag">autojidoan_v1_20261123_gas</span></span>
+      <span>버전 <span class="ver-tag">autojidoan_v1_20261122_gas</span></span>
       <span class="divider">|</span>
       <span>만듦이 <b>useoaeT</b></span>
       <span class="divider">|</span>
