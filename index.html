@@ -343,29 +343,6 @@
     }
     .mini-btn:hover { background: #f1f3f4; }
 
-    /* API 키 설정 모달 / 접이식 */
-    .api-bar {
-      margin-top: 12px;
-      padding: 10px;
-      background: #f8f9fa;
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      font-size: 12px;
-    }
-    .api-bar summary {
-      cursor: pointer;
-      font-weight: 700;
-      color: var(--subtext);
-    }
-    .api-bar input {
-      width: 100%;
-      margin-top: 6px;
-      padding: 6px 8px;
-      border: 1px solid var(--border);
-      border-radius: 4px;
-      font-size: 12px;
-    }
-
     /* 달력 모달 팝업 (openCalendarPopup 재현) */
     .modal-backdrop {
       position: fixed;
@@ -784,12 +761,6 @@
             <div class="progress-title" id="prog-title">진행현황</div>
             <div class="progress-bar-cell" id="prog-bar">대기 중 (버튼을 누르면 진행 상황이 표시됩니다)</div>
           </div>
-
-          <!-- API 키 설정 (코드 상단 키 기본 적용, 필요 시 변경 가능) -->
-          <details class="api-bar">
-            <summary>⚙️ Gemini API 키 설정 (기본 키 내장됨)</summary>
-            <input type="password" id="inp-apiKey" value="AQ.Ab8RN6JgZOqgNaj0VyOiPMzvDdnSc4ye_d_MXu7CfMv4uw-skQ" />
-          </details>
         </div>
 
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
@@ -803,8 +774,8 @@
           </h2>
 
           <div class="helper-bar">
-            <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Plaese wait and try again</b></span>
-            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다. </span>
+            <span>💡 무료버전의 제미나이 API로 여러명이 사용할 수 있으므로, 느리거나 오류가 날 수 있어요. <b>Please wait and try again</b></span>
+            <span>🔗 생성된 자료는 서버에 저장되지 않습니다. 단순히 <b>출력물</b>의 형태를 제공하는 프로그램입니다.</span>
           </div>
 
           <table class="session-table" id="session-table">
@@ -944,13 +915,8 @@
   </div>
 
   <script>
-    // ★ Google AI Studio에서 발급받은 Gemini API 키 (기본값)
-    const DEFAULT_GEMINI_API_KEY = "AQ.Ab8RN6JgZOqgNaj0VyOiPMzvDdnSc4ye_d_MXu7CfMv4uw-skQ";
-
-    function getApiKey() {
-      const inp = document.getElementById("inp-apiKey");
-      return (inp && inp.value.trim()) ? inp.value.trim() : DEFAULT_GEMINI_API_KEY.trim();
-    }
+    // ★ Google Apps Script 웹 앱 프록시 URL (API 키는 GAS 서버 스크립트 속성에 안전하게 보관됨)
+    const GAS_PROXY_URL = "https://script.google.com/macros/s/AKfycbzWl00wElVp4DzJOvZbtpKcLgB_bAm4qTMbwZvFKOMJBUshi-Cg1Y14QVI8hlVlLBcWtA/exec";
 
     // =========================================================================
     // ★ 단계별 연동 데이터 저장소 (운영계획서 -> 표지·지도일지 -> 교수학습지도안)
@@ -1558,111 +1524,45 @@
     }
 
     // =========================================================================
-    // 공통 유틸: gemini-3.8-flash 최우선 고정 + 최신 3.x 이상 Flash 모델 동적 조회
+    // 공통 유틸: GAS 프록시 서버를 통한 안전한 Gemini JSON 호출기
     // =========================================================================
-    async function getAvailableFlashModels(apiKey) {
-      let candidateModels = ["gemini-3.8-flash", "gemini-3.8-flash-lite", "gemini-3.0-flash"];
-      try {
-        const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`);
-        if (listRes.ok) {
-          const listData = await listRes.json();
-          const filtered = (listData.models || [])
-            .filter(m =>
-              m.supportedGenerationMethods &&
-              m.supportedGenerationMethods.includes("generateContent") &&
-              m.name.includes("flash") &&
-              !m.name.includes("omni") &&
-              !m.name.includes("tts") &&
-              !m.name.includes("image") &&
-              !m.name.includes("audio") &&
-              !m.name.includes("thinking") &&
-              !m.name.includes("1.5") &&
-              !m.name.includes("2.0") &&
-              !m.name.includes("2.5")
-            )
-            .map(m => m.name.replace("models/", ""))
-            .sort((a, b) => {
-              if (a === "gemini-3.8-flash") return -1;
-              if (b === "gemini-3.8-flash") return 1;
-              return b.localeCompare(a);
-            });
-
-          if (filtered.length > 0) {
-            candidateModels = filtered;
-          }
-        }
-      } catch (e) {}
-      return candidateModels;
-    }
-
-    // =========================================================================
-    // 공통 유틸: 모델 폴백(재시도) 포함 Gemini JSON 호출기
-    // =========================================================================
-    async function callGeminiWithFallback(apiKey, candidateModels, prompt, schema) {
-      const payload = {
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 8192,
-          responseMimeType: "application/json",
-          responseSchema: schema
-        }
-      };
-
-      let lastErrorCode = "";
-      let lastErrorMsg = "";
-      let lastModel = "";
-
-      for (let i = 0; i < candidateModels.length; i++) {
-        const modelName = candidateModels[i];
-        lastModel = modelName;
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
-
-        try {
-          const response = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          const responseCode = response.status;
-          const responseText = await response.text();
-
-          if (responseCode === 200) {
-            const json = JSON.parse(responseText);
-            const rawText = json.candidates[0].content.parts[0].text;
-            return JSON.parse(rawText);
-          } else {
-            lastErrorCode = responseCode;
-            try {
-              const errObj = JSON.parse(responseText);
-              lastErrorMsg = errObj.error ? errObj.error.message : responseText;
-            } catch (parseErr) {
-              lastErrorMsg = responseText;
-            }
-            continue;
-          }
-        } catch (err) {
-          lastErrorCode = "예외";
-          lastErrorMsg = String(err);
-        }
+    async function callGeminiWithFallback(prompt, schema) {
+      if (!GAS_PROXY_URL || GAS_PROXY_URL.includes("여기에_배포된_URL")) {
+        return { code: "CONFIG", message: "GAS_PROXY_URL이 설정되지 않았습니다.", model: "GAS" };
       }
 
-      return { code: lastErrorCode, message: lastErrorMsg, model: lastModel };
+      try {
+        const response = await fetch(GAS_PROXY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+          },
+          body: JSON.stringify({ prompt, schema })
+        });
+
+        if (!response.ok) {
+          return { code: response.status, message: "GAS 서버 통신 오류", model: "GAS" };
+        }
+
+        const resJson = await response.json();
+        if (resJson.success) {
+          return resJson.data;
+        } else {
+          return {
+            code: resJson.code || "ERR",
+            message: resJson.message || "알 수 없는 오류",
+            model: resJson.model || "GAS"
+          };
+        }
+      } catch (err) {
+        return { code: "NETWORK", message: String(err), model: "GAS" };
+      }
     }
 
     // =========================================================================
     // [0단계 Gemini 호출] '운영계획서' 전용 데이터 생성
     // =========================================================================
-    async function fetchGeminiOperationPlan(subject, program, semesterText, sessions, existingTopics, candidateModels) {
-      const apiKey = getApiKey();
-      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
-        return {
-          overallGoal: "API 키를 입력해주세요.",
-          planItems: sessions.map(() => ({ topic: "", content: "", materials: "", remarks: "" }))
-        };
-      }
-
+    async function fetchGeminiOperationPlan(subject, program, semesterText, sessions, existingTopics) {
       const sessionSummary = sessions.map((s, idx) => {
         const refTopic = (existingTopics && existingTopics[idx]) ? ` | 기존주제참고: ${existingTopics[idx]}` : "";
         return `${idx + 1}번째 블록: ${s.start}~${s.end}차시 (${s.hours}시수)${refTopic}`;
@@ -1705,7 +1605,7 @@ ${sessionSummary}`;
         required: ["overallGoal", "planItems"]
       };
 
-      const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+      const result = await callGeminiWithFallback(prompt, schema);
       if (result && result.overallGoal && Array.isArray(result.planItems)) {
         return result;
       }
@@ -1724,16 +1624,7 @@ ${sessionSummary}`;
     // =========================================================================
     // [1단계 Gemini 호출] 운영계획서의 학습주제(planItems)를 기반으로 차시별 총괄표(학습주제 + 학습목표) 구성
     // =========================================================================
-    async function fetchGeminiLessonPlan(subject, program, semesterText, sessions, opPlanItems, candidateModels) {
-      const apiKey = getApiKey();
-      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
-        return sessions.map(() => ({
-          topic: "API 키 미입력",
-          objective: "상단 설정에서 GEMINI_API_KEY를 입력하세요.",
-          notes: ""
-        }));
-      }
-
+    async function fetchGeminiLessonPlan(subject, program, semesterText, sessions, opPlanItems) {
       const hasOpTopics = Array.isArray(opPlanItems) && opPlanItems.length === sessions.length;
 
       const sessionSummary = sessions.map((s, idx) => {
@@ -1773,7 +1664,7 @@ ${sessionSummary}`;
         }
       };
 
-      const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+      const result = await callGeminiWithFallback(prompt, schema);
       if (Array.isArray(result)) {
         return sessions.map((_, idx) => {
           const gen = result[idx] || { topic: "", objective: "", notes: "" };
@@ -1798,12 +1689,7 @@ ${sessionSummary}`;
     // =========================================================================
     // [2단계 Gemini 호출] 표지 및 지도일지의 차시별 지도내용을 토대로 세부 지도안(1,100자 내외, 최소 1,000자) 구성
     // =========================================================================
-    async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems, candidateModels) {
-      const apiKey = getApiKey();
-      if (!apiKey || apiKey === "여기에_GEMINI_API_KEY_입력") {
-        return sessions.map(() => "API 키를 입력해주세요.");
-      }
-
+    async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems) {
       const allResults = [];
       const batchSize = 4;
 
@@ -1866,7 +1752,7 @@ ${blockDetails}`;
           items: { type: "STRING" }
         };
 
-        const result = await callGeminiWithFallback(apiKey, candidateModels, prompt, schema);
+        const result = await callGeminiWithFallback(prompt, schema);
         if (Array.isArray(result)) {
           for (let k = 0; k < chunkSessions.length; k++) {
             allResults.push(result[k] || "");
@@ -2126,15 +2012,13 @@ ${blockDetails}`;
       if (!data) return;
 
       setButtonsDisabled(true);
-      updateProgressBar(10, "데이터 분석", "running");
+      updateProgressBar(15, "데이터 분석", "running");
 
       const fp = buildPlanFingerprint(data);
-      updateProgressBar(25, "AI 모델 연결", "running");
-      const candidateModels = await getAvailableFlashModels(getApiKey());
 
       updateProgressBar(45, "운영계획서 AI 작성", "running");
       const opPlanData = await fetchGeminiOperationPlan(
-        data.subject, data.program, data.semesterText, data.sessions, null, candidateModels
+        data.subject, data.program, data.semesterText, data.sessions, null
       );
 
       sharedPlanData.fingerprint = fp;
@@ -2142,7 +2026,7 @@ ${blockDetails}`;
       sharedPlanData.lessonPlanList = null;
       sharedPlanData.detailedActivities = null;
 
-      updateProgressBar(75, "시트 서식 구성", "running");
+      updateProgressBar(80, "시트 서식 구성", "running");
       renderOperationPlanView(data, opPlanData);
 
       setButtonsDisabled(false);
@@ -2162,32 +2046,30 @@ ${blockDetails}`;
       }
 
       setButtonsDisabled(true);
-      updateProgressBar(10, "데이터 분석", "running");
+      updateProgressBar(15, "데이터 분석", "running");
 
       const fp = buildPlanFingerprint(data);
-      updateProgressBar(20, "AI 모델 연결", "running");
-      const candidateModels = await getAvailableFlashModels(getApiKey());
 
       let opPlanData = (sharedPlanData.fingerprint === fp) ? sharedPlanData.opPlanData : null;
       if (!opPlanData) {
         updateProgressBar(30, "운영계획서 학습주제 먼저 구성", "running");
         opPlanData = await fetchGeminiOperationPlan(
-          data.subject, data.program, data.semesterText, data.sessions, null, candidateModels
+          data.subject, data.program, data.semesterText, data.sessions, null
         );
         sharedPlanData.fingerprint = fp;
         sharedPlanData.opPlanData = opPlanData;
         renderOperationPlanView(data, opPlanData);
       }
 
-      updateProgressBar(55, "운영계획서 주제 기반 지도일지 작성", "running");
+      updateProgressBar(60, "운영계획서 주제 기반 지도일지 작성", "running");
       const aiPlanList = await fetchGeminiLessonPlan(
-        data.subject, data.program, data.semesterText, data.sessions, opPlanData.planItems, candidateModels
+        data.subject, data.program, data.semesterText, data.sessions, opPlanData.planItems
       );
 
       sharedPlanData.lessonPlanList = aiPlanList;
       sharedPlanData.detailedActivities = null;
 
-      updateProgressBar(80, "표지 및 총괄표 구성", "running");
+      updateProgressBar(85, "표지 및 총괄표 구성", "running");
       renderCoverAndSummaryView(data, aiPlanList);
 
       setButtonsDisabled(false);
@@ -2210,13 +2092,12 @@ ${blockDetails}`;
 
       const fp = buildPlanFingerprint(data);
       const { program, subject, semesterText, timeRangeText, sessions } = data;
-      const candidateModels = await getAvailableFlashModels(getApiKey());
 
       let opPlanData = (sharedPlanData.fingerprint === fp) ? sharedPlanData.opPlanData : null;
       if (!opPlanData) {
-        updateProgressBar(10, "운영계획서 학습주제 먼저 구성", "running");
+        updateProgressBar(12, "운영계획서 학습주제 먼저 구성", "running");
         opPlanData = await fetchGeminiOperationPlan(
-          subject, program, semesterText, sessions, null, candidateModels
+          subject, program, semesterText, sessions, null
         );
         sharedPlanData.fingerprint = fp;
         sharedPlanData.opPlanData = opPlanData;
@@ -2225,16 +2106,16 @@ ${blockDetails}`;
 
       let aiPlanList = (sharedPlanData.fingerprint === fp) ? sharedPlanData.lessonPlanList : null;
       if (!aiPlanList) {
-        updateProgressBar(18, "표지·지도일지 학습목표 먼저 구성", "running");
+        updateProgressBar(20, "표지·지도일지 학습목표 먼저 구성", "running");
         aiPlanList = await fetchGeminiLessonPlan(
-          subject, program, semesterText, sessions, opPlanData.planItems, candidateModels
+          subject, program, semesterText, sessions, opPlanData.planItems
         );
         sharedPlanData.lessonPlanList = aiPlanList;
         renderCoverAndSummaryView(data, aiPlanList);
       }
 
       const detailedActivities = await fetchGeminiDetailedActivities(
-        subject, program, semesterText, sessions, aiPlanList, opPlanData.planItems, candidateModels
+        subject, program, semesterText, sessions, aiPlanList, opPlanData.planItems
       );
 
       sharedPlanData.detailedActivities = detailedActivities;
