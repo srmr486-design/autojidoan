@@ -727,7 +727,7 @@
         <!-- 좌측: 기본 정보 입력 및 실행 버튼 -->
         <div class="card">
           <h2 class="card-title">
-            <span>1. 기본 정보 입력 (D3:D14)</span>
+            <span>1. 기본 정보 입력</span>
             <button class="mini-btn" onclick="resetDemoData()">예시값 채우기</button>
           </h2>
 
@@ -766,7 +766,7 @@
         <!-- 우측: 차시별 시수 및 지도일시 테이블 -->
         <div class="card">
           <h2 class="card-title">
-            <span>2. 차시별 시수 및 지도일시 입력 (E18:F열)</span>
+            <span>2. 차시별 시수 및 지도일시 입력</span>
             <div>
               <button class="mini-btn" onclick="addSessionRow()">+ 행 추가</button>
               <button class="mini-btn" onclick="resetSessions()">초기화</button>
@@ -1691,7 +1691,7 @@ ${sessionSummary}`;
     // =========================================================================
     async function fetchGeminiDetailedActivities(subject, program, semesterText, sessions, aiPlanList, opPlanItems) {
       const allResults = [];
-      const batchSize = 4;
+      const batchSize = 2;
 
       for (let startIdx = 0; startIdx < sessions.length; startIdx += batchSize) {
         const endIdx = Math.min(startIdx + batchSize, sessions.length);
